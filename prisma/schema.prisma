@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContestType {
+  DESKTOP
+  MOBILE
+}
+
+enum Role {
+  ADMIN
+  USER
+  SUPER_ADMIN
+  JUDGE
+}
+
+enum ContestStatus {
+  DRAFT
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum WallpaperStatus {
+  SUBMITTED
+  PENDING
+  JUDGED
+  APPROVED
+  REJECTED
+}
+
+enum OTPType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  TWO_FACTOR_AUTH
+  LOGIN_VERIFICATION
+}
+
+model User {
+  id                        String    @id @default(cuid())
+  email                     String    @unique
+  name                      String
+  username                  String    @unique
+  password                  String? // Should be hashed (bcrypt/argon2) before storing, null for OAuth users
+  googleId                  String?   @unique // Google OAuth ID
+  avatar                    String? // Profile picture URL
+  role                      Role      @default(USER)
+  bankName                  String?
+  accountNumber             String? // Consider encryption for sensitive data
+  accountUsername           String?
+  lastParticipatedContestId String?
+  isActive                  Boolean   @default(true)
+  isOnline                  Boolean   @default(false)
+  isVerified                Boolean   @default(false)
+  isBanned                  Boolean   @default(false)
+  bannedReason              String?
+  bannedAt                  DateTime?
+  bannedUntil               DateTime? // Permanent ban if null
+  lastLogin                 DateTime  @default(now())
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  // Relations
+  sessions                  Session[]
+  otpCodes                  OTPCode[]
+  submittedWallpapers       Wallpaper[]       @relation("WallpaperSubmitter")
+  judgedWallpaperResults    WallpaperResult[] @relation("WallpaperJudge")
+  lastParticipatedContest   Contest?          @relation("LastParticipatedContest", fields: [lastParticipatedContestId], references: [id], onDelete: SetNull)
+  firstPlaceContestResults  ContestResult[]   @relation("FirstPlaceWinner")
+  secondPlaceContestResults ContestResult[]   @relation("SecondPlaceWinner")
+  thirdPlaceContestResults  ContestResult[]   @relation("ThirdPlaceWinner")
+
+  @@index([role])
+  @@index([isActive])
+  @@index([isVerified])
+  @@index([createdAt])
+  @@index([lastParticipatedContestId])
+}
+
+model Contest {
+  id                String        @id @default(cuid())
+  startTime         DateTime
+  endTime           DateTime // Should be after startTime (validate in application code)
+  contestStatus     ContestStatus @default(DRAFT)
+  contestType       ContestType   @default(DESKTOP)
+  // participants Int[] @default([0])
+  totalPrize        Int           @default(0) // Should be >= 0
+  firstPrize        Int           @default(0) // Should be >= 0
+  secondPrize       Int           @default(0) // Should be >= 0
+  thirdPrize        Int           @default(0) // Should be >= 0
+  resultAnnouncedAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  wallpapers   Wallpaper[]
+  result       ContestResult?
+  participants User[]         @relation("LastParticipatedContest")
+
+  @@index([contestStatus])
+  @@index([contestType])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([createdAt])
+}
+
+model ContestResult {
+  id                     String   @id @default(cuid())
+  contestId              String   @unique
+  firstPlaceUserId       String?
+  secondPlaceUserId      String?
+  thirdPlaceUserId       String?
+  firstPlaceWallpaperId  String?
+  secondPlaceWallpaperId String?
+  thirdPlaceWallpaperId  String?
+  honorableMentions      String[] @default([])
+  wallpaperUrls          String[] @default([])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  contest              Contest    @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  firstPlaceUser       User?      @relation("FirstPlaceWinner", fields: [firstPlaceUserId], references: [id], onDelete: SetNull)
+  secondPlaceUser      User?      @relation("SecondPlaceWinner", fields: [secondPlaceUserId], references: [id], onDelete: SetNull)
+  thirdPlaceUser       User?      @relation("ThirdPlaceWinner", fields: [thirdPlaceUserId], references: [id], onDelete: SetNull)
+  firstPlaceWallpaper  Wallpaper? @relation("FirstPlaceWallpaper", fields: [firstPlaceWallpaperId], references: [id], onDelete: SetNull)
+  secondPlaceWallpaper Wallpaper? @relation("SecondPlaceWallpaper", fields: [secondPlaceWallpaperId], references: [id], onDelete: SetNull)
+  thirdPlaceWallpaper  Wallpaper? @relation("ThirdPlaceWallpaper", fields: [thirdPlaceWallpaperId], references: [id], onDelete: SetNull)
+
+  @@index([contestId])
+  @@index([firstPlaceUserId])
+  @@index([secondPlaceUserId])
+  @@index([thirdPlaceUserId])
+  @@index([firstPlaceWallpaperId])
+  @@index([secondPlaceWallpaperId])
+  @@index([thirdPlaceWallpaperId])
+  @@index([createdAt])
+}
+
+model Wallpaper {
+  id                 String      @id @default(cuid())
+  url                String
+  submittedById      String
+  isContestWallpaper Boolean     @default(true)
+  isSubmittedByOwner Boolean     @default(false)
+  resolution         String
+  orientation        Orientation @default(PORTRAIT)
+  isLiveWallpaper    Boolean     @default(false)
+  isAudioEnabled     Boolean     @default(false)
+  tags               String[]    @default([])
+  description        String?
+  isFeatured         Boolean     @default(false)
+  contestId          String?
+  overallRating      Int         @default(0) // Rating scale: 0-100 (or adjust based on your needs)
+  publicRating       Int         @default(0) // Rating scale: 0-100
+  submittedAt        DateTime    @default(now())
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  submittedBy               User             @relation("WallpaperSubmitter", fields: [submittedById], references: [id], onDelete: Cascade)
+  contest                   Contest?         @relation(fields: [contestId], references: [id], onDelete: SetNull)
+  wallpaperResult           WallpaperResult?
+  firstPlaceContestResults  ContestResult[]  @relation("FirstPlaceWallpaper")
+  secondPlaceContestResults ContestResult[]  @relation("SecondPlaceWallpaper")
+  thirdPlaceContestResults  ContestResult[]  @relation("ThirdPlaceWallpaper")
+
+  @@index([isContestWallpaper])
+  @@index([isFeatured])
+  @@index([submittedAt])
+  @@index([overallRating])
+  @@index([publicRating])
+  @@index([createdAt])
+  @@index([orientation])
+  @@index([isLiveWallpaper])
+  @@index([isAudioEnabled])
+  @@index([tags])
+  @@index([submittedById])
+  @@index([contestId])
+}
+
+model WallpaperResult {
+  id                 String          @id @default(cuid())
+  wallpaperId        String?         @unique // One-to-one with Wallpaper
+  overallRating      Int             @default(0) // Rating scale: 0-100
+  publicRating       Int             @default(0) // Rating scale: 0-100
+  readability        Int             @default(0) // Rating scale: 0-10 or 0-100
+  socialCredit       Int             @default(0)
+  versatility        Int             @default(0)
+  colorScheme        Int             @default(0)
+  creativity         Int             @default(0)
+  appeal             Int             @default(0)
+  ownership          Int             @default(0)
+  miscellaneousScore Int             @default(0)
+  judgedById         String?
+  wallpaperStatus    WallpaperStatus @default(SUBMITTED)
+  rejectedReason     String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  // Relations
+  wallpaper Wallpaper? @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
+  judgedBy  User?      @relation("WallpaperJudge", fields: [judgedById], references: [id], onDelete: SetNull)
+
+  @@index([wallpaperStatus])
+  @@index([overallRating])
+  @@index([createdAt])
+  @@index([wallpaperId])
+  @@index([judgedById])
+}
+
+model OTPCode {
+  id        String    @id @default(cuid())
+  userId    String
+  code      String // 6-digit OTP code
+  type      OTPType   @default(EMAIL_VERIFICATION)
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+  @@index([expiresAt])
+  @@index([isUsed])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Session {
+  id                    String   @id @default(cuid())
+  userId                String
+  accessToken           String   @unique // JWT access token
+  refreshToken          String   @unique // JWT refresh token
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  deviceInfo            String? // User agent, device type, etc.
+  ipAddress             String?
+  isActive              Boolean  @default(true)
+  lastUsedAt            DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([accessToken])
+  @@index([refreshToken])
+  @@index([isActive])
+  @@index([refreshTokenExpiresAt])
+  @@index([createdAt])
+}

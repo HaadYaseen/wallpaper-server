@@ -1,0 +1,46 @@
+# User Type
+type Dummy {
+  id: ID!
+  email: String!
+  name: String!
+  username: String!
+  avatar: String
+  role: Role!
+  isActive: Boolean!
+  isOnline: Boolean!
+  isVerified: Boolean!
+  isBanned: Boolean!
+  bannedReason: String
+  bannedAt: String
+  bannedUntil: String
+  lastLogin: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateDummyInput {
+    name: String!
+    username: String!
+    avatar: String
+}
+
+input UpdateDummyInput {
+    id: ID!
+    name: String
+    username: String
+    avatar: String
+}
+
+# Extend base Query with user queries
+extend type Query {
+  dummies: [Dummy!]!
+  dummy(id: ID!): Dummy
+}
+
+# Extend base Mutation with user mutations
+extend type Mutation {
+  createDummy(input: CreateDummyInput!): Dummy
+  updateDummy(input: UpdateDummyInput!): Dummy
+  deleteDummy(id: ID!): Boolean!
+}
+

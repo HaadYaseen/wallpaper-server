@@ -1,0 +1,47 @@
+# User Type
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  username: String!
+  avatar: String
+  role: Role!
+  isActive: Boolean!
+  isOnline: Boolean!
+  isVerified: Boolean!
+  isBanned: Boolean!
+  bannedReason: String
+  bannedAt: String
+  bannedUntil: String
+  lastLogin: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum Role {
+  ADMIN
+  USER
+  SUPER_ADMIN
+  JUDGE
+}
+
+input UpdateUserInput {
+    id: ID!
+    name: String
+    username: String
+    avatar: String
+}
+
+# Extend base Query with user queries
+extend type Query {
+  users: [User!]!
+  user(id: ID!): User
+  me: User
+}
+
+# Extend base Mutation with user mutations
+extend type Mutation {
+  updateUser(input: UpdateUserInput!): User
+  deleteUser(id: ID!): Boolean!
+}
+

@@ -1,0 +1,45 @@
+# Base Mutation type (required before extending)
+type Mutation {
+  _empty: String
+}
+
+# Auth Input Types
+# Local account signup (email/password)
+input SignUpInput {
+  email: String!
+  password: String!
+  name: String!
+  username: String!
+  avatar: String
+}
+
+# Email/password login
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+# Google OAuth authentication (handles both signup and login)
+input GoogleAuthInput {
+  idToken: String!
+}
+
+# Auth Response Types
+type AuthResponse {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+  accessTokenExpiresAt: String!
+  refreshTokenExpiresAt: String!
+}
+
+# Extend base Mutation with auth mutations
+extend type Mutation {
+  signUp(input: SignUpInput!): AuthResponse!          # Local account creation (email/password)
+  login(input: LoginInput!): AuthResponse!            # Email/password login
+  googleAuth(input: GoogleAuthInput!): AuthResponse! # Google OAuth (auto signup/login)
+  refreshToken(refreshToken: String!): AuthResponse!
+  logout: Boolean!
+  logoutAll: Boolean!
+}
+

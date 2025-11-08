@@ -1,11 +1,15 @@
 import { ContestGraphqlType, MutationResolvers } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
+import { requireRole } from "../../../utils/rbac";
+import { Role } from "@prisma/client";
 
 export const updateContest: MutationResolvers["updateContest"] = async (
   root,
   args,
   context
 ) => {
+  requireRole(context.user, [Role.ADMIN, Role.SUPER_ADMIN]);
+
   try {
     const { input } = args;
     const { prisma } = context; 

@@ -7,6 +7,8 @@ import schema from './graphql';
 import { createContext } from './utils/context';
 import { initializePassport } from './middleware/googleAuth';
 import { statusCodePlugin } from './utils/statusCodePlugin';
+import { apiLoggerPlugin } from './utils/apiLoggerPlugin';
+import { logger } from './utils/logger';
 
 const PORT = process.env.PORT || 4000;
 
@@ -30,7 +32,7 @@ async function startServer() {
 
   const apolloServer = new ApolloServer({
     schema,
-    plugins: [statusCodePlugin],
+    plugins: [statusCodePlugin, apiLoggerPlugin],
   });
 
   await apolloServer.start();
@@ -42,12 +44,14 @@ async function startServer() {
     })
   );
 
-  app.listen(Number(PORT), () =>
-    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`)
-  );
+  app.listen(Number(PORT), () => {
+    logger.api.info(`Server started on port ${PORT}`, { port: PORT });
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+  });
 }
 
 startServer().catch((error: unknown) => {
+  logger.error('Failed to start server', error);
   console.error('Failed to start server:', error);
   process.exit(1);
 });

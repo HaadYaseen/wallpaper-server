@@ -1,6 +1,5 @@
-# User Type
-type Dummy {
-  id: ID!
+type UserGraphqlType {
+  id: String!
   email: String!
   name: String!
   username: String!
@@ -18,14 +17,15 @@ type Dummy {
   updatedAt: String!
 }
 
-input CreateDummyInput {
-    name: String!
-    username: String!
-    avatar: String
+enum Role {
+  ADMIN
+  USER
+  SUPER_ADMIN
+  JUDGE
 }
 
-input UpdateDummyInput {
-    id: ID!
+input UpdateUserInput {
+    id: String!
     name: String
     username: String
     avatar: String
@@ -33,14 +33,14 @@ input UpdateDummyInput {
 
 # Extend base Query with user queries
 extend type Query {
-  dummies: [Dummy!]!
-  dummy(id: ID!): Dummy
+  users: [UserGraphqlType!]!
+  user(id: String!): UserGraphqlType
+  me: UserGraphqlType
 }
 
 # Extend base Mutation with user mutations
 extend type Mutation {
-  createDummy(input: CreateDummyInput!): Dummy
-  updateDummy(input: UpdateDummyInput!): Dummy
-  deleteDummy(id: ID!): Boolean!
+  updateUser(input: UpdateUserInput!): UserGraphqlType
+  deleteUser(id: String!): Boolean!
 }
 

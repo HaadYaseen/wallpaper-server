@@ -3,19 +3,18 @@ import cors from 'cors';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { rateLimiter } from './middleware/rateLimiter';
-import { typeDefs, resolvers } from './graphql';
+import schema from './graphql';
 import { createContext } from './utils/context';
 import { initializePassport } from './middleware/googleAuth';
+import { statusCodePlugin } from './utils/statusCodePlugin';
 
 const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   const app: Express = express();
 
-  // Initialize Passport for Google OAuth
   initializePassport();
 
-  // CORS configuration
   app.use(
     cors({
       origin: process.env.CLIENT_URL || 'http://localhost:3000',
@@ -28,9 +27,10 @@ async function startServer() {
   app.use(express.json());
   app.use(rateLimiter);
 
+
   const apolloServer = new ApolloServer({
-    typeDefs,
-    resolvers,
+    schema,
+    plugins: [statusCodePlugin],
   });
 
   await apolloServer.start();

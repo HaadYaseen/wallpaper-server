@@ -10,9 +10,6 @@ export interface AuthenticatedUser {
   isVerified: boolean;
 }
 
-/**
- * Check if user has required role
- */
 export function hasRole(user: AuthenticatedUser | null, requiredRoles: Role[]): boolean {
   if (!user) {
     return false;
@@ -25,9 +22,6 @@ export function hasRole(user: AuthenticatedUser | null, requiredRoles: Role[]): 
   return requiredRoles.includes(user.role);
 }
 
-/**
- * Require authentication - throws if user is not authenticated
- */
 export function requireAuth(user: AuthenticatedUser | null): AuthenticatedUser {
   if (!user) {
     throw new GraphQLError('Authentication required', {
@@ -64,9 +58,6 @@ export function requireAuth(user: AuthenticatedUser | null): AuthenticatedUser {
   return user;
 }
 
-/**
- * Require specific role(s) - throws if user doesn't have required role
- */
 export function requireRole(user: AuthenticatedUser | null, requiredRoles: Role[]): AuthenticatedUser {
   const authenticatedUser = requireAuth(user);
 
@@ -81,9 +72,6 @@ export function requireRole(user: AuthenticatedUser | null, requiredRoles: Role[
   return authenticatedUser;
 }
 
-/**
- * Role hierarchy - higher roles have more permissions
- */
 export const ROLE_HIERARCHY: Record<Role, number> = {
   USER: 1,
   JUDGE: 2,
@@ -91,9 +79,6 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
   SUPER_ADMIN: 4,
 };
 
-/**
- * Check if user role is at least as high as required role
- */
 export function hasMinimumRole(user: AuthenticatedUser | null, minimumRole: Role): boolean {
   if (!user) {
     return false;

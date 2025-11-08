@@ -2,20 +2,24 @@ import { Request, Response } from 'express';
 import { PrismaClient, User } from '@prisma/client';
 import { verifyAccessToken } from './auth';
 import { AuthenticatedUser } from './rbac';
+import { getOperationName } from './getOperationName';
 
-// Shared Prisma instance
 export const prisma = new PrismaClient();
 
-/**
- * Get user from token (for context)
- */
+const PUBLIC_OPERATIONS = [
+  'IntrospectionQuery',
+  'signUp',
+  'login',
+  'googleAuth',
+  'refreshToken',
+];
+
 async function getUserFromToken(token: string): Promise<User | null> {
   const payload = verifyAccessToken(token);
   if (!payload) {
     return null;
   }
 
-  // Verify session is still active
   const session = await prisma.session.findFirst({
     where: {
       userId: payload.userId,
@@ -29,7 +33,6 @@ async function getUserFromToken(token: string): Promise<User | null> {
     return null;
   }
 
-  // Update last used timestamp
   await prisma.session.update({
     where: { id: session.id },
     data: { lastUsedAt: new Date() },
@@ -47,9 +50,6 @@ export interface GraphQLContext {
   user: AuthenticatedUser | null;
 }
 
-/**
- * Create GraphQL context with authentication
- */
 export async function createContext({
   req,
   res,
@@ -59,7 +59,29 @@ export async function createContext({
 }): Promise<GraphQLContext> {
   let user: AuthenticatedUser | null = null;
 
-  // Extract token from Authorization header
+  let operationName: string | null = null;
+  
+  if (req.body?.operationName) {
+    operationName = req.body.operationName;
+  } else if (req.body?.query) {
+    operationName = getOperationName(req.body.query);
+  }
+
+  const isPublicOperation = operationName
+    ? PUBLIC_OPERATIONS.some(
+        (op) => op.toLowerCase() === operationName?.toLowerCase()
+      )
+    : false;
+
+  if (isPublicOperation) {
+    return {
+      req,
+      res,
+      prisma,
+      user: null,
+    };
+  }
+
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);

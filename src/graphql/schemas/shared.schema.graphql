@@ -1,0 +1,9 @@
+# Common scalar types
+scalar DateTime
+scalar JSON
+
+# Base Query type (required before extending)
+type Query {
+  _empty: String
+}
+

@@ -1,0 +1,64 @@
+enum ContestType {
+  DESKTOP
+  MOBILE
+}
+
+enum ContestStatus {
+  DRAFT
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+type ContestGraphqlType {
+  id: String!
+  startTime: DateTime!
+  endTime: DateTime!
+  contestStatus: ContestStatus!
+  contestType: ContestType!
+  totalPrize: Int!
+  firstPrize: Int!
+  secondPrize: Int!
+  thirdPrize: Int!
+  resultAnnouncedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateContestInput {
+  startTime: DateTime!
+  endTime: DateTime!
+  contestStatus: ContestStatus!
+  contestType: ContestType!
+  totalPrize: Int!
+  firstPrize: Int!
+  secondPrize: Int!
+  thirdPrize: Int!
+}
+
+input UpdateContestInput {
+  id: String!
+  startTime: DateTime!
+  endTime: DateTime!
+  contestStatus: ContestStatus!
+  contestType: ContestType!
+  totalPrize: Int!
+  firstPrize: Int!
+  secondPrize: Int!
+  thirdPrize: Int!
+}
+
+# Extend base Query with contest queries
+extend type Query {
+  contests: [ContestGraphqlType!]!
+  contest(id: String!): ContestGraphqlType
+}
+
+# Extend base Mutation with contest mutations
+extend type Mutation {
+  createContest(input: CreateContestInput!): ContestGraphqlType
+  updateContest(input: UpdateContestInput!): ContestGraphqlType
+  deleteContest(id: String!): Boolean!
+}
+

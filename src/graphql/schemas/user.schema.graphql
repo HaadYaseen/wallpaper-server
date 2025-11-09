@@ -31,9 +31,14 @@ input UpdateUserInput {
     avatar: String
 }
 
+input QueryUsersFilterInput {
+  role: Role
+  isBanned: Boolean
+}
+
 # Extend base Query with user queries
 extend type Query {
-  users: [UserGraphqlType!]!
+  users(filter: QueryUsersFilterInput, pagination: Pagination): [UserGraphqlType!]!
   user(id: String!): UserGraphqlType
   me: UserGraphqlType
 }
@@ -43,4 +48,3 @@ extend type Mutation {
   updateUser(input: UpdateUserInput!): UserGraphqlType
   deleteUser(id: String!): Boolean!
 }
-

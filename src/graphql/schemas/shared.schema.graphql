@@ -7,3 +7,7 @@ type Query {
   _empty: String
 }
 
+input Pagination {
+  skip: Int
+  take: Int
+}

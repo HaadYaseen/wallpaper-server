@@ -1,0 +1,76 @@
+enum WallpaperStatus {
+  SUBMITTED
+  PENDING
+  JUDGED
+  APPROVED
+  REJECTED
+}
+
+# enum WallpaperResultStatus {
+#   ACCEPTED
+#   REJECTED
+#   PENDING
+# }
+
+type WallpaperResultGraphqlType {
+  id: String!
+  wallpaperId: String!
+  overallRating: Int!
+  publicRating: Int!
+  readability: Int!
+  socialCredit: Int!
+  versatility: Int!
+  colorScheme: Int!
+  creativity: Int!
+  appeal: Int!
+  ownership: Int!
+  miscellaneousScore: Int!
+  judgedById: String!
+  createdAt: String!
+  updatedAt: String!
+  judgedBy: UserGraphqlType!
+}
+
+input CreateWallpaperResultInput {
+  wallpaperId: String!
+  overallRating: Int!
+  publicRating: Int!
+  readability: Int!
+  socialCredit: Int!
+  versatility: Int!
+  colorScheme: Int!
+  creativity: Int!
+  appeal: Int!
+  ownership: Int!
+  miscellaneousScore: Int!
+  judgedById: String!
+}
+
+input UpdateWallpaperResultInput {
+  id: String!
+  overallRating: Int!
+  publicRating: Int!
+  readability: Int!
+  socialCredit: Int!
+  versatility: Int!
+  colorScheme: Int!
+  creativity: Int!
+  appeal: Int!
+  miscellaneousScore: Int!
+}
+
+input QueryWallpaperResultsFilterInput {
+  wallpaperId: String
+  judgedById: String
+  wallpaperStatus: WallpaperStatus
+}
+
+extend type Query {
+  wallpaperResult(id: String!): WallpaperResultGraphqlType!
+  wallpaperResults(filter: QueryWallpaperResultsFilterInput, pagination: Pagination): [WallpaperResultGraphqlType!]!
+}
+
+extend type Mutation {
+  createWallpaperResult(input: CreateWallpaperResultInput!): WallpaperResultGraphqlType!
+  updateWallpaperResult(input: UpdateWallpaperResultInput!): WallpaperResultGraphqlType!
+}

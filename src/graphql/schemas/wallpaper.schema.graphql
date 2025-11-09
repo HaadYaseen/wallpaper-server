@@ -1,0 +1,87 @@
+enum Orientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum WallpaperStatus {
+  SUBMITTED
+  PENDING
+  JUDGED
+  APPROVED
+  REJECTED
+}
+
+type WallpaperGraphqlType {
+  id: String!
+  url: String!
+  submittedById: String!
+  isContestWallpaper: Boolean!
+  isSubmittedByOwner: Boolean!
+  resolution: String!
+  orientation: Orientation!
+  isLiveWallpaper: Boolean!
+  isAudioEnabled: Boolean!
+  tags: [String]!
+  description: String!
+  isFeatured: Boolean!
+  contestId: String
+  overallRating: Int!
+  publicRating: Int!
+  wallpaperStatus: WallpaperStatus!
+  rejectedReason: String
+  submittedAt: String!
+  createdAt: String!
+  updatedAt: String!
+  submittedBy: UserGraphqlType!
+  contest: ContestGraphqlType
+#   wallpaperResult: WallpaperResultGraphqlType
+#   firstPlaceContestResults: [ContestResultGraphqlType]
+#   secondPlaceContestResults: [ContestResultGraphqlType]
+#   thirdPlaceContestResults: [ContestResultGraphqlType]
+}
+
+input CreateWallpaperInput {
+  url: String!
+  submittedById: String!
+  isContestWallpaper: Boolean!
+  isSubmittedByOwner: Boolean!
+  resolution: String!
+  orientation: Orientation!
+  isLiveWallpaper: Boolean!
+  isAudioEnabled: Boolean!
+  tags: [String]!
+  description: String!
+  contestId: String
+}
+
+input QueryWallpapersFilterInput {
+  contestId: String
+  submittedById: String
+  isContestWallpaper: Boolean
+  isSubmittedByOwner: Boolean
+  resolution: String
+  orientation: Orientation
+  isLiveWallpaper: Boolean
+  isAudioEnabled: Boolean
+  tags: [String]
+  isFeatured: Boolean
+  wallpaperStatus: WallpaperStatus
+}
+
+input acceptOrRejectWallpaperInput {
+    wallpaperId: String!
+    wallpaperStatus: WallpaperStatus!
+    rejectedReason: String
+}
+
+extend type Query {
+  wallpapers(filter: QueryWallpapersFilterInput, pagination: Pagination): [WallpaperGraphqlType!]!
+  wallpaper(id: String!): WallpaperGraphqlType
+}
+
+extend type Mutation {
+  createWallpaper(input: CreateWallpaperInput!): WallpaperGraphqlType
+  # updateWallpaper(input: UpdateWallpaperInput!): WallpaperGraphqlType
+  deleteWallpaper(id: String!): Boolean!
+  acceptOrRejectWallpaper(input: acceptOrRejectWallpaperInput!): Boolean!
+}

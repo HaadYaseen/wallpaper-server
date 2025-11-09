@@ -1,0 +1,40 @@
+type ContestResultGraphqlType {
+    id: String!
+    contestId: String!
+    firstPlaceUserId: String!
+    secondPlaceUserId: String!
+    thirdPlaceUserId: String!
+    firstPlaceWallpaperId: String!
+    secondPlaceWallpaperId: String!
+    thirdPlaceWallpaperId: String!
+    honorableMentions: [String!]!
+    wallpaperUrls: [String!]!
+    createdAt: String!
+    updatedAt: String!
+    contest: ContestGraphqlType!
+    firstPlaceUser: UserGraphqlType!
+    secondPlaceUser: UserGraphqlType!
+    thirdPlaceUser: UserGraphqlType!
+    firstPlaceWallpaper: WallpaperGraphqlType!
+    secondPlaceWallpaper: WallpaperGraphqlType!
+    thirdPlaceWallpaper: WallpaperGraphqlType!
+}
+
+input QueryContestResultsFilterInput {
+    participantId: String
+    contestStatus: ContestStatus
+    contestType: ContestType
+}
+
+input CreateContestResultInput {
+    contestId: String!
+}
+
+extend type Query {
+    contestResult(id: String!): ContestResultGraphqlType!
+    contestResults(filter: QueryContestResultsFilterInput, pagination: Pagination): [ContestResultGraphqlType!]!
+}
+
+extend type Mutation {
+    createContestResult(input: CreateContestResultInput!): ContestResultGraphqlType!
+}

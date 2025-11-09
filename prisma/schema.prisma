@@ -162,6 +162,8 @@ model Wallpaper {
   description        String?
   isFeatured         Boolean     @default(false)
   contestId          String?
+  wallpaperStatus    WallpaperStatus @default(SUBMITTED)
+  rejectedReason     String?
   overallRating      Int         @default(0) // Rating scale: 0-100 (or adjust based on your needs)
   publicRating       Int         @default(0) // Rating scale: 0-100
   submittedAt        DateTime    @default(now())
@@ -188,6 +190,7 @@ model Wallpaper {
   @@index([tags])
   @@index([submittedById])
   @@index([contestId])
+  @@index([wallpaperStatus])
 }
 
 model WallpaperResult {
@@ -204,8 +207,6 @@ model WallpaperResult {
   ownership          Int             @default(0)
   miscellaneousScore Int             @default(0)
   judgedById         String?
-  wallpaperStatus    WallpaperStatus @default(SUBMITTED)
-  rejectedReason     String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
@@ -213,7 +214,6 @@ model WallpaperResult {
   wallpaper Wallpaper? @relation(fields: [wallpaperId], references: [id], onDelete: Cascade)
   judgedBy  User?      @relation("WallpaperJudge", fields: [judgedById], references: [id], onDelete: SetNull)
 
-  @@index([wallpaperStatus])
   @@index([overallRating])
   @@index([createdAt])
   @@index([wallpaperId])

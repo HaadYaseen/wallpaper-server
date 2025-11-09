@@ -1,12 +1,21 @@
 import bcrypt from 'bcrypt';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt, { SignOptions, JwtPayload } from 'jsonwebtoken';
 import { User, Role } from '@prisma/client';
 import { prisma } from './context';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key-change-in-production';
-const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || '1h';
-const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '30d';
+// Validate and get required environment variables
+function getRequiredEnvVar(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+const JWT_SECRET = getRequiredEnvVar('JWT_SECRET');
+const JWT_REFRESH_SECRET = getRequiredEnvVar('JWT_REFRESH_SECRET');
+const ACCESS_TOKEN_EXPIRY = getRequiredEnvVar('ACCESS_TOKEN_EXPIRY');
+const REFRESH_TOKEN_EXPIRY = getRequiredEnvVar('REFRESH_TOKEN_EXPIRY');
 
 export interface TokenPayload {
   userId: string;
@@ -69,7 +78,15 @@ export function generateTokens(user: User): AuthTokens {
 
 export function verifyAccessToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    if (decoded.userId && decoded.email && decoded.role) {
+      return {
+        userId: decoded.userId as string,
+        email: decoded.email as string,
+        role: decoded.role as Role,
+      };
+    }
+    return null;
   } catch (error) {
     return null;
   }
@@ -77,7 +94,15 @@ export function verifyAccessToken(token: string): TokenPayload | null {
 
 export function verifyRefreshToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as JwtPayload;
+    if (decoded.userId && decoded.email && decoded.role) {
+      return {
+        userId: decoded.userId as string,
+        email: decoded.email as string,
+        role: decoded.role as Role,
+      };
+    }
+    return null;
   } catch (error) {
     return null;
   }

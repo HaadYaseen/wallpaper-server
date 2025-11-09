@@ -48,6 +48,9 @@ export interface GraphQLContext {
   res: Response;
   prisma: PrismaClient;
   user: AuthenticatedUser | null;
+  _operationName?: string | null;
+  _operationType?: 'query' | 'mutation' | 'subscription';
+  _isPublic?: boolean;
 }
 
 export async function createContext({
@@ -73,12 +76,22 @@ export async function createContext({
       )
     : false;
 
+  // Store operation type for logging in plugin
+  const operationType = req.body?.query?.includes('mutation')
+    ? 'mutation'
+    : req.body?.query?.includes('subscription')
+    ? 'subscription'
+    : 'query';
+
   if (isPublicOperation) {
     return {
       req,
       res,
       prisma,
       user: null,
+      _operationName: operationName,
+      _operationType: operationType,
+      _isPublic: true,
     };
   }
 
@@ -104,6 +117,9 @@ export async function createContext({
     res,
     prisma,
     user,
+    _operationName: operationName,
+    _operationType: operationType,
+    _isPublic: false,
   };
 }
 

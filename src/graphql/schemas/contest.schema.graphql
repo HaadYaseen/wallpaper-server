@@ -28,7 +28,7 @@ type ContestGraphqlType {
 
 input CreateContestInput {
   startTime: DateTime!
-  endTime: DateTime!
+  durationInDays: Int!
   contestStatus: ContestStatus!
   contestType: ContestType!
   totalPrize: Int!
@@ -49,16 +49,20 @@ input UpdateContestInput {
   thirdPrize: Int!
 }
 
-# Extend base Query with contest queries
-extend type Query {
-  contests: [ContestGraphqlType!]!
-  contest(id: String!): ContestGraphqlType
+input QueryContestsFilterInput {
+  contestStatus: ContestStatus
+  contestType: ContestType
+  participantId: String
+  startTime: DateTime
 }
 
-# Extend base Mutation with contest mutations
+extend type Query {
+  contest(id: String!): ContestGraphqlType
+  contests(filter: QueryContestsFilterInput, pagination: Pagination): [ContestGraphqlType!]!
+}
+
 extend type Mutation {
   createContest(input: CreateContestInput!): ContestGraphqlType
   updateContest(input: UpdateContestInput!): ContestGraphqlType
   deleteContest(id: String!): Boolean!
 }
-

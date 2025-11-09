@@ -15,8 +15,22 @@ export const createContest: MutationResolvers["createContest"] = async (
     const { input } = args;
     const { prisma } = context;
 
+    // Calculate endTime from startTime + durationInDays
+    const startTime = new Date(input.startTime);
+    const endTime = new Date(startTime);
+    endTime.setDate(endTime.getDate() + input.durationInDays);
+
     const contest = await prisma.contest.create({
-      data: { ...input },
+      data: {
+        startTime: input.startTime,
+        endTime: endTime,
+        contestStatus: input.contestStatus,
+        contestType: input.contestType,
+        totalPrize: input.totalPrize,
+        firstPrize: input.firstPrize,
+        secondPrize: input.secondPrize,
+        thirdPrize: input.thirdPrize,
+      },
     });
 
     return contest as unknown as ContestGraphqlType;

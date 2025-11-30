@@ -1,23 +1,29 @@
 import { PrismaClient, User } from '@prisma/client';
 
-export interface BanStatus {
+export interface BanCheckResult {
   isBanned: boolean;
   isPermanent: boolean;
   bannedUntil?: Date;
   bannedReason?: string;
   bannedAt?: Date;
   minutesRemaining?: number;
+  message: string;
 }
+
 export async function checkUserBan(
   prisma: PrismaClient,
   user: Pick<User, 'id' | 'isBanned' | 'bannedUntil' | 'bannedReason' | 'bannedAt'>
-): Promise<BanStatus> {
+): Promise<BanCheckResult> {
+
   if (!user.isBanned) {
-    return { isBanned: false, isPermanent: false };
+    return {
+      isBanned: false,
+      isPermanent: false,
+      message: '',
+    };
   }
 
   if (user.bannedUntil && user.bannedUntil < new Date()) {
-    // Temporary ban expired, automatically unban the user
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -27,7 +33,11 @@ export async function checkUserBan(
         bannedAt: null,
       },
     });
-    return { isBanned: false, isPermanent: false };
+    return {
+      isBanned: false,
+      isPermanent: false,
+      message: '',
+    };
   }
 
   const isPermanent = !user.bannedUntil;
@@ -36,6 +46,24 @@ export async function checkUserBan(
     ? Math.ceil((user.bannedUntil.getTime() - now.getTime()) / (1000 * 60))
     : undefined;
 
+  let message = '';
+  if (isPermanent) {
+    const reason = user.bannedReason
+      ? ` Reason: ${user.bannedReason}`
+      : '';
+    message = `Your account has been permanently banned.${reason} Please contact support if you believe this is an error.`;
+  } else {
+    const minutesText = minutesRemaining
+      ? minutesRemaining > 0
+        ? `${minutesRemaining} minute(s)`
+        : 'a few moments'
+      : 'the ban period';
+    const reason = user.bannedReason
+      ? ` Reason: ${user.bannedReason}.`
+      : '';
+    message = `Your account has been temporarily banned. Please try again in ${minutesText}.${reason}`;
+  }
+
   return {
     isBanned: true,
     isPermanent,
@@ -43,30 +71,6 @@ export async function checkUserBan(
     bannedReason: user.bannedReason || undefined,
     bannedAt: user.bannedAt || undefined,
     minutesRemaining,
+    message,
   };
 }
-
-export function getBanMessage(banStatus: BanStatus): string {
-  if (!banStatus.isBanned) {
-    return '';
-  }
-
-  if (banStatus.isPermanent) {
-    const reason = banStatus.bannedReason
-      ? ` Reason: ${banStatus.bannedReason}`
-      : '';
-    return `Your account has been permanently banned.${reason} Please contact support if you believe this is an error.`;
-  }
-
-  const minutesText = banStatus.minutesRemaining
-    ? banStatus.minutesRemaining > 0
-      ? `${banStatus.minutesRemaining} minute(s)`
-      : 'a few moments'
-    : 'the ban period';
-  const reason = banStatus.bannedReason
-    ? ` Reason: ${banStatus.bannedReason}.`
-    : '';
-
-  return `Your account has been temporarily banned. Please try again in ${minutesText}.${reason}`;
-}
-

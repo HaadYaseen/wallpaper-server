@@ -1,5 +1,6 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { rateLimiter } from './middleware/rateLimiter';
@@ -26,6 +27,7 @@ async function startServer() {
     })
   );
 
+  app.use(cookieParser());
   app.use(express.json());
   app.use(rateLimiter);
 

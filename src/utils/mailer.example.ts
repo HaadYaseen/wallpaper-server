@@ -1,10 +1,3 @@
-/**
- * Example usage of the mailer utility
- * 
- * This file demonstrates how to use the mailer functions.
- * DO NOT import this file in production code.
- */
-
 import {
   sendEmail,
   sendTextEmail,
@@ -96,7 +89,6 @@ export async function exampleSendToMultiple() {
 export async function exampleVerificationEmail() {
   const emailData = generateVerificationEmail({
     name: 'John Doe',
-    verificationLink: 'https://example.com/verify?token=abc123',
     verificationCode: '123456',
   });
 
@@ -110,7 +102,6 @@ export async function exampleVerificationEmail() {
 export async function examplePasswordResetEmail() {
   const emailData = generatePasswordResetEmail({
     name: 'John Doe',
-    resetLink: 'https://example.com/reset?token=xyz789',
     resetCode: '789012',
     expiresInMinutes: 60,
   });

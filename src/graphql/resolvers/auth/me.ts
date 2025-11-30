@@ -1,5 +1,5 @@
 import { QueryResolvers, UserGraphqlType } from "../../../generated/graphql";
-import { prisma } from "../../../utils/context";
+import { prisma } from "../../../utils/prisma";
 
 export const me: QueryResolvers["me"] = async (
   root,

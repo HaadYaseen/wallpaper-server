@@ -1,8 +1,9 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers, UserResponseType } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
 import { hashPassword } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
-import { generateOTP, generateUniqueUsername } from "./utils";
+import { prisma } from "../../../utils/prisma";
+import { generateOTP } from "../../../utils/otp";
+import { generateUniqueUsername } from "../../../utils/generateUsername";
 import { OTPType } from "@prisma/client";
 import { sendEmail } from "../../../utils/mailer";
 import { generateVerificationEmail } from "../../../utils/emailTemplates";
@@ -14,7 +15,6 @@ export const signUp: MutationResolvers["signUp"] = async (
 ) => {
   const { email, password, name, username, avatar } = args.input;
 
-  // Validate input
   if (!email || !password || !name || !username) {
     throw new GraphQLError('All fields are required', {
       extensions: { code: 'BAD_USER_INPUT' },
@@ -39,7 +39,6 @@ export const signUp: MutationResolvers["signUp"] = async (
     });
   }
   
-  // Check if user already exists
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email }, { username }],
@@ -52,7 +51,6 @@ export const signUp: MutationResolvers["signUp"] = async (
     });
   }
 
-  // Generate unique username if needed
   const uniqueUsername = await generateUniqueUsername(username);
 
   const hashedPassword = await hashPassword(password);
@@ -75,7 +73,7 @@ export const signUp: MutationResolvers["signUp"] = async (
     verificationCode,
   });
 
-  await sendEmail({
+   sendEmail({
     to: user.email,
     subject: emailContent.subject,
     html: emailContent.html,
@@ -83,7 +81,7 @@ export const signUp: MutationResolvers["signUp"] = async (
   });
 
   return {
-    user: user as unknown as UserGraphqlType,
+    user: user as UserResponseType,
     message: 'Account created successfully. Please check your email for the verification code.',
   };
 };

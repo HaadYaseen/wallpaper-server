@@ -1,15 +1,18 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers } from "../../../generated/graphql";
+import { UserResponseType } from "../../../types/userTypes";
 import { GraphQLError } from "graphql";
-import { verifyPassword, generateTokens, createSession } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
-import { AuthResponse } from "./types";
+import { generateTokens, createSession } from "../../../utils/auth";
+import { prisma } from "../../../utils/prisma";
+import { AuthResponse } from "../../../types/authTypes";
+import { setAuthCookies } from "../../../utils/auth";
 import {
   isAccountLocked,
   recordFailedLoginAttempt,
   resetFailedLoginAttempts,
   getRemainingAttempts,
 } from "../../../utils/bruteForceProtection";
-import { checkUserBan, getBanMessage } from "../../../utils/banCheck";
+import { checkUserBan } from "../../../utils/banCheck";
+import bcrypt from 'bcrypt';
 
 export const login: MutationResolvers["login"] = async (
   root,
@@ -28,22 +31,17 @@ export const login: MutationResolvers["login"] = async (
     where: { email },
   });
 
-  // Always return generic error to prevent user enumeration
-  const genericError = new GraphQLError('Invalid email or password', {
-    extensions: { code: 'UNAUTHENTICATED' },
-  });
-
   if (!user) {
     // Add a small delay to prevent timing attacks
     await new Promise(resolve => setTimeout(resolve, 100));
-    throw genericError;
+    throw new GraphQLError('Invalid email or password', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
   }
 
-  // Check if user is banned (handles both permanent and temporary bans)
   const banStatus = await checkUserBan(prisma, user);
   if (banStatus.isBanned) {
-    const banMessage = getBanMessage(banStatus);
-    throw new GraphQLError(banMessage, {
+    throw new GraphQLError(banStatus.message, {
       extensions: {
         code: 'FORBIDDEN',
         isPermanent: banStatus.isPermanent,
@@ -54,7 +52,6 @@ export const login: MutationResolvers["login"] = async (
     });
   }
 
-  // Check if account is locked due to brute force attempts
   const lockStatus = await isAccountLocked(prisma, user.id);
   if (lockStatus.locked && lockStatus.lockedUntil) {
     const minutesRemaining = Math.ceil(
@@ -71,7 +68,6 @@ export const login: MutationResolvers["login"] = async (
     );
   }
 
-  // Check if user has a password (OAuth users don't have passwords)
   if (!user.password) {
     await new Promise(resolve => setTimeout(resolve, 100));
     throw new GraphQLError('Please sign in with Google', {
@@ -79,10 +75,8 @@ export const login: MutationResolvers["login"] = async (
     });
   }
 
-  // Verify password
-  const isValidPassword = await verifyPassword(password, user.password);
+  const isValidPassword = await bcrypt.compare(password, user.password || '');
   if (!isValidPassword) {
-    // Record failed login attempt
     const lockResult = await recordFailedLoginAttempt(prisma, user.id);
     const remainingAttempts = await getRemainingAttempts(prisma, user.id);
 
@@ -113,13 +107,14 @@ export const login: MutationResolvers["login"] = async (
   }
 
   if (!user.isActive) {
-    throw new GraphQLError('Account is inactive', {
-      extensions: { code: 'FORBIDDEN' },
-    });
+   prisma.user.update({
+    where: { id: user.id },
+    data: { isActive: true },
+   });
   }
 
   if (!user.isVerified) {
-    throw new GraphQLError('Please verify your email address before logging in. Check your email for the verification code.', {
+    throw new GraphQLError('Please verify your email address before logging in. Check your email for the verification code. or request a new verification code.', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }
@@ -138,12 +133,12 @@ export const login: MutationResolvers["login"] = async (
     data: { lastLogin: new Date() },
   });
 
+  setAuthCookies(context.res, tokens);
+
   return {
-    user: user as unknown as UserGraphqlType,
+    user: user as UserResponseType,
     accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
     accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
   } as AuthResponse;
 };
 

@@ -1,10 +1,11 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers, UserResponseType } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
 import { generateTokens, createSession } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
+import { prisma } from "../../../utils/prisma";
 import { OTPType } from "@prisma/client";
-import { AuthResponse } from "./types";
-import { verifyOTP } from "./utils";
+import { AuthResponse } from "../../../types/authTypes";
+import { verifyOTP } from "../../../utils/otp";
+import { setAuthCookies } from "../../../utils/auth";
 
 export const verifyEmail: MutationResolvers["verifyEmail"] = async (
   root,
@@ -59,12 +60,12 @@ export const verifyEmail: MutationResolvers["verifyEmail"] = async (
     data: { lastLogin: new Date() },
   });
 
+  setAuthCookies(context.res, tokens);
+
   return {
-    user: updatedUser as unknown as UserGraphqlType,
+    user: updatedUser as UserResponseType,
     accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
     accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
   } as AuthResponse;
 };
 

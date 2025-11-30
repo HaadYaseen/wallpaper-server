@@ -1,14 +1,6 @@
 import { Role } from '@prisma/client';
 import { GraphQLError } from 'graphql';
-
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  role: Role;
-  isActive: boolean;
-  isBanned: boolean;
-  isVerified: boolean;
-}
+import { AuthenticatedUser } from '../types/authTypes';
 
 export function hasRole(user: AuthenticatedUser | null, requiredRoles: Role[]): boolean {
   if (!user) {

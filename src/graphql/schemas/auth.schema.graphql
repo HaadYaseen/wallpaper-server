@@ -2,7 +2,6 @@ type Mutation {
   _empty: String
 }
 
-# Local account signup (email/password)
 input SignUpInput {
   email: String!
   password: String!
@@ -16,21 +15,27 @@ input LoginInput {
   password: String!
 }
 
-# Google OAuth authentication (handles both signup and login)
 input GoogleAuthInput {
   idToken: String!
 }
 
+type UserResponseType {
+  id: String!
+  email: String!
+  role: Role!
+  name: String!
+  username: String!
+  avatar: String
+}
+
 type AuthResponse {
-  user: UserGraphqlType!
+  user: UserResponseType!
   accessToken: String!
-  refreshToken: String!
   accessTokenExpiresAt: String!
-  refreshTokenExpiresAt: String!
 }
 
 type SignUpResponse {
-  user: UserGraphqlType!
+  user: UserResponseType!
   message: String!
 }
 

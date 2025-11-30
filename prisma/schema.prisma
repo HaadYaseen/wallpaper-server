@@ -225,8 +225,8 @@ model WallpaperResult {
 
 model OTPCode {
   id        String    @id @default(cuid())
-  userId    String
-  code      String // 6-digit OTP code
+  userId    String    @unique
+  code      String    @unique
   type      OTPType   @default(EMAIL_VERIFICATION)
   expiresAt DateTime
   isUsed    Boolean   @default(false)

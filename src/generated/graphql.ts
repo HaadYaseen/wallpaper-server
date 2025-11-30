@@ -1,5 +1,5 @@
 import { GraphQLResolveInfo, GraphQLScalarType, GraphQLScalarTypeConfig } from 'graphql';
-import { GraphQLContext } from '../types/graphqlContextTypes';
+import { GraphQLContext } from '../utils/context';
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -147,6 +147,7 @@ export type Mutation = {
   logout: Scalars['Boolean']['output'];
   logoutAll: Scalars['Boolean']['output'];
   refreshToken: AuthResponse;
+  requestOTP: RequestOtpResponse;
   signUp: SignUpResponse;
   updateContest?: Maybe<ContestGraphqlType>;
   updateUser?: Maybe<UserGraphqlType>;
@@ -210,6 +211,11 @@ export type MutationRefreshTokenArgs = {
 };
 
 
+export type MutationRequestOtpArgs = {
+  input: RequestOtpInput;
+};
+
+
 export type MutationSignUpArgs = {
   input: SignUpInput;
 };
@@ -233,6 +239,13 @@ export type MutationUpdateWallpaperResultArgs = {
 export type MutationVerifyEmailArgs = {
   input: VerifyEmailInput;
 };
+
+export enum OtpType {
+  EmailVerification = 'EMAIL_VERIFICATION',
+  LoginVerification = 'LOGIN_VERIFICATION',
+  PasswordReset = 'PASSWORD_RESET',
+  TwoFactorAuth = 'TWO_FACTOR_AUTH'
+}
 
 export enum Orientation {
   Landscape = 'LANDSCAPE',
@@ -353,6 +366,17 @@ export type QueryWallpapersFilterInput = {
   wallpaperStatus?: InputMaybe<WallpaperStatus>;
 };
 
+export type RequestOtpInput = {
+  email: Scalars['String']['input'];
+  type: OtpType;
+};
+
+export type RequestOtpResponse = {
+  __typename?: 'RequestOTPResponse';
+  expiresInMinutes: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+};
+
 export enum Role {
   Admin = 'ADMIN',
   Judge = 'JUDGE',
@@ -431,6 +455,7 @@ export type UserResponseType = {
   avatar?: Maybe<Scalars['String']['output']>;
   email: Scalars['String']['output'];
   id: Scalars['String']['output'];
+  isVerified: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   role: Role;
   username: Scalars['String']['output'];
@@ -589,6 +614,7 @@ export type ResolversTypes = ResolversObject<{
   JSON: ResolverTypeWrapper<Scalars['JSON']['output']>;
   LoginInput: LoginInput;
   Mutation: ResolverTypeWrapper<{}>;
+  OTPType: OtpType;
   Orientation: Orientation;
   Pagination: Pagination;
   Query: ResolverTypeWrapper<{}>;
@@ -597,6 +623,8 @@ export type ResolversTypes = ResolversObject<{
   QueryUsersFilterInput: QueryUsersFilterInput;
   QueryWallpaperResultsFilterInput: QueryWallpaperResultsFilterInput;
   QueryWallpapersFilterInput: QueryWallpapersFilterInput;
+  RequestOTPInput: RequestOtpInput;
+  RequestOTPResponse: ResolverTypeWrapper<RequestOtpResponse>;
   Role: Role;
   SignUpInput: SignUpInput;
   SignUpResponse: ResolverTypeWrapper<SignUpResponse>;
@@ -636,6 +664,8 @@ export type ResolversParentTypes = ResolversObject<{
   QueryUsersFilterInput: QueryUsersFilterInput;
   QueryWallpaperResultsFilterInput: QueryWallpaperResultsFilterInput;
   QueryWallpapersFilterInput: QueryWallpapersFilterInput;
+  RequestOTPInput: RequestOtpInput;
+  RequestOTPResponse: RequestOtpResponse;
   SignUpInput: SignUpInput;
   SignUpResponse: SignUpResponse;
   String: Scalars['String']['output'];
@@ -719,6 +749,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   logout?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   logoutAll?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   refreshToken?: Resolver<ResolversTypes['AuthResponse'], ParentType, ContextType, RequireFields<MutationRefreshTokenArgs, 'refreshToken'>>;
+  requestOTP?: Resolver<ResolversTypes['RequestOTPResponse'], ParentType, ContextType, RequireFields<MutationRequestOtpArgs, 'input'>>;
   signUp?: Resolver<ResolversTypes['SignUpResponse'], ParentType, ContextType, RequireFields<MutationSignUpArgs, 'input'>>;
   updateContest?: Resolver<Maybe<ResolversTypes['ContestGraphqlType']>, ParentType, ContextType, RequireFields<MutationUpdateContestArgs, 'input'>>;
   updateUser?: Resolver<Maybe<ResolversTypes['UserGraphqlType']>, ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'input'>>;
@@ -739,6 +770,12 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   wallpaperResult?: Resolver<ResolversTypes['WallpaperResultGraphqlType'], ParentType, ContextType, RequireFields<QueryWallpaperResultArgs, 'id'>>;
   wallpaperResults?: Resolver<Array<ResolversTypes['WallpaperResultGraphqlType']>, ParentType, ContextType, Partial<QueryWallpaperResultsArgs>>;
   wallpapers?: Resolver<Array<ResolversTypes['WallpaperGraphqlType']>, ParentType, ContextType, Partial<QueryWallpapersArgs>>;
+}>;
+
+export type RequestOtpResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RequestOTPResponse'] = ResolversParentTypes['RequestOTPResponse']> = ResolversObject<{
+  expiresInMinutes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type SignUpResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SignUpResponse'] = ResolversParentTypes['SignUpResponse']> = ResolversObject<{
@@ -771,6 +808,7 @@ export type UserResponseTypeResolvers<ContextType = GraphQLContext, ParentType e
   avatar?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isVerified?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   role?: Resolver<ResolversTypes['Role'], ParentType, ContextType>;
   username?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -831,6 +869,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   JSON?: GraphQLScalarType;
   Mutation?: MutationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  RequestOTPResponse?: RequestOtpResponseResolvers<ContextType>;
   SignUpResponse?: SignUpResponseResolvers<ContextType>;
   UserGraphqlType?: UserGraphqlTypeResolvers<ContextType>;
   UserResponseType?: UserResponseTypeResolvers<ContextType>;

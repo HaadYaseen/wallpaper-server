@@ -14,4 +14,5 @@ export interface GoogleUserInfo {
     name: string;
     username: string;
     avatar?: string;
+    isVerified: boolean;
   }

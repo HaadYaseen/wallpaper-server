@@ -6,6 +6,7 @@ import { googleAuth } from "./googleAuth";
 import { refreshToken } from "./refreshToken";
 import { logout } from "./logout";
 import { logoutAll } from "./logoutAll";
+import { requestOTP } from "./requestOTP";
 import { Resolvers } from "../../../generated/graphql";
 
 export const authResolvers: Partial<Resolvers> = {
@@ -20,6 +21,7 @@ export const authResolvers: Partial<Resolvers> = {
     refreshToken,
     logout,
     logoutAll,
+    requestOTP,
   },
 };
 

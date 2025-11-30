@@ -1,9 +1,11 @@
 import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
-import { hashPassword, generateTokens, createSession } from "../../../utils/auth";
+import { hashPassword } from "../../../utils/auth";
 import { prisma } from "../../../utils/context";
-import { generateUniqueUsername } from "./utils";
-import { AuthResponse } from "./types";
+import { generateOTP, generateUniqueUsername } from "./utils";
+import { OTPType } from "@prisma/client";
+import { sendEmail } from "../../../utils/mailer";
+import { generateVerificationEmail } from "../../../utils/emailTemplates";
 
 export const signUp: MutationResolvers["signUp"] = async (
   root,
@@ -53,10 +55,8 @@ export const signUp: MutationResolvers["signUp"] = async (
   // Generate unique username if needed
   const uniqueUsername = await generateUniqueUsername(username);
 
-  // Hash password
   const hashedPassword = await hashPassword(password);
 
-  // Create user
   const user = await prisma.user.create({
     data: {
       email,
@@ -64,30 +64,27 @@ export const signUp: MutationResolvers["signUp"] = async (
       name,
       username: uniqueUsername,
       avatar: avatar || null,
-      isVerified: false, // Email verification required for local accounts
+      isVerified: false,
     },
   });
 
-  // Generate tokens
-  const tokens = generateTokens(user);
+  const verificationCode = await generateOTP(user.id, OTPType.EMAIL_VERIFICATION, 15);
 
-  // Create session
-  const deviceInfo = context.req.headers['user-agent'] || undefined;
-  const ipAddress = context.req.ip || context.req.socket.remoteAddress || undefined;
-  await createSession(user.id, tokens, deviceInfo, ipAddress);
+  const emailContent = generateVerificationEmail({
+    name: user.name,
+    verificationCode,
+  });
 
-  // Update last login
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLogin: new Date() },
+  await sendEmail({
+    to: user.email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text,
   });
 
   return {
     user: user as unknown as UserGraphqlType,
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-  } as AuthResponse;
+    message: 'Account created successfully. Please check your email for the verification code.',
+  };
 };
 

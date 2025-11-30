@@ -29,8 +29,19 @@ type AuthResponse {
   refreshTokenExpiresAt: String!
 }
 
+type SignUpResponse {
+  user: UserGraphqlType!
+  message: String!
+}
+
+input VerifyEmailInput {
+  email: String!
+  code: String!
+}
+
 extend type Mutation {
-  signUp(input: SignUpInput!): AuthResponse!
+  signUp(input: SignUpInput!): SignUpResponse!
+  verifyEmail(input: VerifyEmailInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
   googleAuth(input: GoogleAuthInput!): AuthResponse!
   refreshToken(refreshToken: String!): AuthResponse!

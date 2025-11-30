@@ -1,6 +1,7 @@
 import { GraphQLError } from 'graphql';
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../../../utils/context';
+import { OTPType } from '@prisma/client';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
@@ -55,5 +56,91 @@ export async function generateUniqueUsername(baseUsername: string): Promise<stri
   }
 
   return finalUsername;
+}
+
+export function makeRandomOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function generateOTP(
+  userId: string,
+  type: OTPType = OTPType.EMAIL_VERIFICATION,
+  expiresInMinutes: number = 15
+): Promise<string> {
+  let code: string;
+  let isUnique = false;
+
+  while (!isUnique) {
+    code = makeRandomOTP();
+    const existingOTP = await prisma.oTPCode.findFirst({
+      where: {
+        code,
+        isUsed: false,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    isUnique = !existingOTP;
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes);
+
+  await prisma.oTPCode.updateMany({
+    where: {
+      userId,
+      type,
+      isUsed: false,
+    },
+    data: {
+      isUsed: true,
+      usedAt: new Date(),
+    },
+  });
+
+  await prisma.oTPCode.create({
+    data: {
+      userId,
+      code: code!,
+      type,
+      expiresAt,
+    },
+  });
+
+  return code!;
+}
+
+export async function verifyOTP(
+  userId: string,
+  code: string,
+  type: OTPType = OTPType.EMAIL_VERIFICATION
+): Promise<boolean> {
+  const otpRecord = await prisma.oTPCode.findFirst({
+    where: {
+      userId,
+      code,
+      type,
+      isUsed: false,
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  if (!otpRecord) {
+    return false;
+  }
+
+  await prisma.oTPCode.update({
+    where: { id: otpRecord.id },
+    data: {
+      isUsed: true,
+      usedAt: new Date(),
+    },
+  });
+
+  return true;
 }
 

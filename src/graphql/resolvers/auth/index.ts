@@ -1,5 +1,6 @@
 import { me } from "./me";
 import { signUp } from "./signUp";
+import { verifyEmail } from "./verifyEmail";
 import { login } from "./login";
 import { googleAuth } from "./googleAuth";
 import { refreshToken } from "./refreshToken";
@@ -13,6 +14,7 @@ export const authResolvers: Partial<Resolvers> = {
   },
   Mutation: {
     signUp,
+    verifyEmail,
     login,
     googleAuth,
     refreshToken,

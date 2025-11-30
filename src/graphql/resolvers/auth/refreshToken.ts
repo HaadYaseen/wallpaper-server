@@ -17,7 +17,6 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Verify refresh token
   const payload = verifyRefreshToken(token);
   if (!payload) {
     throw new GraphQLError('Invalid refresh token', {
@@ -25,7 +24,6 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Verify session is still active
   const session = await prisma.session.findFirst({
     where: {
       userId: payload.userId,
@@ -41,7 +39,6 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Get user
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
   });
@@ -52,10 +49,8 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Generate new tokens
   const tokens = generateTokens(user);
 
-  // Update session with new tokens
   await prisma.session.update({
     where: { id: session.id },
     data: {

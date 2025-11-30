@@ -30,6 +30,8 @@
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "rate-limit-redis": "^4.2.3"
@@ -45,6 +47,8 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/lodash": "^4.17.20",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.3",
     "@types/passport-google-oauth20": "^2.0.14",
     "copyfiles": "^2.4.1",
     "prisma": "^6.19.0",

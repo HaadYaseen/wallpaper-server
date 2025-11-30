@@ -1,6 +1,8 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { prisma } from '../utils/context';
+import { sendEmail } from '../utils/mailer';
+import { generateWelcomeEmail } from '../utils/emailTemplates';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -79,9 +81,19 @@ export function configureGoogleStrategy() {
                   password: '',
                 },
               });
+              
+              const emailData = generateWelcomeEmail({
+                name: displayName,
+                loginLink: `${process.env.FRONTEND_URL}/auth/login`,
+              });
+              await sendEmail({
+                to: email,
+                ...emailData,
+              });
             }
           }
 
+         
           return done(null, user);
         } catch (error) {
           return done(error as Error | null, undefined);

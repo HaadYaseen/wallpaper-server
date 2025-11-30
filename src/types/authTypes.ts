@@ -25,8 +25,7 @@ export interface TokenPayload {
 
   export interface AuthResponse {
     user: UserResponseType;
-    accessToken: string;
-    accessTokenExpiresAt: string;
+    message: string;
   }
   
   

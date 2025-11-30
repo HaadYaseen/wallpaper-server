@@ -21,8 +21,7 @@ export type Scalars = {
 
 export type AuthResponse = {
   __typename?: 'AuthResponse';
-  accessToken: Scalars['String']['output'];
-  accessTokenExpiresAt: Scalars['String']['output'];
+  message: Scalars['String']['output'];
   user: UserResponseType;
 };
 
@@ -681,8 +680,7 @@ export type ResolversParentTypes = ResolversObject<{
 }>;
 
 export type AuthResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AuthResponse'] = ResolversParentTypes['AuthResponse']> = ResolversObject<{
-  accessToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  accessTokenExpiresAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   user?: Resolver<ResolversTypes['UserResponseType'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;

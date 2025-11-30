@@ -3,7 +3,6 @@ import { GraphQLError } from "graphql";
 import { hashPassword } from "../../../utils/auth";
 import { prisma } from "../../../utils/prisma";
 import { generateOTP } from "../../../utils/otp";
-import { generateUniqueUsername } from "../../../utils/generateUsername";
 import { OTPType } from "@prisma/client";
 import { sendEmail } from "../../../utils/mailer";
 import { generateVerificationEmail } from "../../../utils/emailTemplates";
@@ -51,8 +50,6 @@ export const signUp: MutationResolvers["signUp"] = async (
     });
   }
 
-  const uniqueUsername = await generateUniqueUsername(username);
-
   const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
@@ -60,7 +57,7 @@ export const signUp: MutationResolvers["signUp"] = async (
       email,
       password: hashedPassword,
       name,
-      username: uniqueUsername,
+      username,
       avatar: avatar || null,
       isVerified: false,
     },

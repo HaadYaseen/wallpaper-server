@@ -64,8 +64,7 @@ export const verifyEmail: MutationResolvers["verifyEmail"] = async (
 
   return {
     user: updatedUser as UserResponseType,
-    accessToken: tokens.accessToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
+    message: 'Email verified successfully',
   } as AuthResponse;
 };
 

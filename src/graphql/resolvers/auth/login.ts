@@ -137,8 +137,7 @@ export const login: MutationResolvers["login"] = async (
 
   return {
     user: user as UserResponseType,
-    accessToken: tokens.accessToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
+    message: 'Login successful',
   } as AuthResponse;
 };
 

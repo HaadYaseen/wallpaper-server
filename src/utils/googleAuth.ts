@@ -3,8 +3,8 @@ import { OAuth2Client } from 'google-auth-library';
 import { prisma } from './prisma';
 import { sendEmail } from './mailer';
 import { generateWelcomeEmail } from './emailTemplates';
-import { generateUniqueUsername } from './generateUsername';
 import { GoogleUserInfo } from '../types/userTypes';
+import { generateUniqueUsername } from './generateUsername';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 

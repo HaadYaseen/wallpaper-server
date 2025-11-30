@@ -68,8 +68,7 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
 
   return {
     user: user as UserResponseType,
-    accessToken: tokens.accessToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
+    message: 'Token refreshed successfully',
   } as AuthResponse;
 };
 

@@ -31,8 +31,7 @@ type UserResponseType {
 
 type AuthResponse {
   user: UserResponseType!
-  accessToken: String!
-  accessTokenExpiresAt: String!
+  message: String!
 }
 
 type SignUpResponse {

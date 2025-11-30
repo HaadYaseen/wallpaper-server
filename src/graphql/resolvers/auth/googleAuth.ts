@@ -48,8 +48,7 @@ export const googleAuth: MutationResolvers["googleAuth"] = async (
 
   return {
     user: user as UserResponseType,
-    accessToken: tokens.accessToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
+    message: 'Google authentication successful',
   } as AuthResponse;
 };
 

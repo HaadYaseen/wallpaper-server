@@ -1,30 +1,23 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers, UserResponseType } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
-import { hashPassword, generateTokens, createSession } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
-import { generateUniqueUsername } from "./utils";
-import { AuthResponse } from "./types";
+import { hashPassword } from "../../../utils/auth";
+import { prisma } from "../../../utils/prisma";
+import { generateOTP } from "../../../utils/otp";
+import { OTPType } from "@prisma/client";
+import { sendEmail } from "../../../utils/mailer";
+import { generateVerificationEmail } from "../../../utils/emailTemplates";
+import { signUpInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { SignUpInput } from "../../../types/authTypes";
 
 export const signUp: MutationResolvers["signUp"] = async (
   root,
   args,
   context
 ) => {
-  const { email, password, name, username, avatar } = args.input;
+  const validatedInput = validateInput<SignUpInput>(signUpInputSchema, args.input);
+  const { email, password, name, username, avatar } = validatedInput;
 
-  // Validate input
-  if (!email || !password || !name || !username) {
-    throw new GraphQLError('All fields are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
-
-  if (password.length < 8) {
-    throw new GraphQLError('Password must be at least 8 characters', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
-  
   if (username.toLowerCase().includes('admin') || name.toLowerCase().includes('admin')) {
     throw new GraphQLError('Username and name cannot contain "admin"', {
       extensions: { code: 'BAD_USER_INPUT' },
@@ -37,7 +30,6 @@ export const signUp: MutationResolvers["signUp"] = async (
     });
   }
   
-  // Check if user already exists
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email }, { username }],
@@ -50,44 +42,36 @@ export const signUp: MutationResolvers["signUp"] = async (
     });
   }
 
-  // Generate unique username if needed
-  const uniqueUsername = await generateUniqueUsername(username);
-
-  // Hash password
   const hashedPassword = await hashPassword(password);
 
-  // Create user
   const user = await prisma.user.create({
     data: {
       email,
       password: hashedPassword,
       name,
-      username: uniqueUsername,
+      username,
       avatar: avatar || null,
-      isVerified: false, // Email verification required for local accounts
+      isVerified: false,
     },
   });
 
-  // Generate tokens
-  const tokens = generateTokens(user);
+  const verificationCode = await generateOTP(user.id, OTPType.EMAIL_VERIFICATION, 15);
 
-  // Create session
-  const deviceInfo = context.req.headers['user-agent'] || undefined;
-  const ipAddress = context.req.ip || context.req.socket.remoteAddress || undefined;
-  await createSession(user.id, tokens, deviceInfo, ipAddress);
+  const emailContent = generateVerificationEmail({
+    name: user.name,
+    verificationCode,
+  });
 
-  // Update last login
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLogin: new Date() },
+   sendEmail({
+    to: user.email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text,
   });
 
   return {
-    user: user as unknown as UserGraphqlType,
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
-  } as AuthResponse;
+    user: user as UserResponseType,
+    message: 'Account created successfully. Please check your email for the verification code.',
+  };
 };
 

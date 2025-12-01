@@ -1,9 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt, { SignOptions, JwtPayload } from 'jsonwebtoken';
 import { User, Role } from '@prisma/client';
-import { prisma } from './context';
+import { prisma } from './prisma';
+import { AuthTokens, TokenPayload } from '../types/authTypes';
+import { GraphQLError } from 'graphql';
+import { Response } from 'express';
 
-// Validate and get required environment variables
 function getRequiredEnvVar(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -16,39 +18,16 @@ const JWT_SECRET = getRequiredEnvVar('JWT_SECRET');
 const JWT_REFRESH_SECRET = getRequiredEnvVar('JWT_REFRESH_SECRET');
 const ACCESS_TOKEN_EXPIRY = getRequiredEnvVar('ACCESS_TOKEN_EXPIRY');
 const REFRESH_TOKEN_EXPIRY = getRequiredEnvVar('REFRESH_TOKEN_EXPIRY');
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  role: Role;
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: Date;
-  refreshTokenExpiresAt: Date;
-}
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none' as const,
+  path: '/',
+};
 
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 12;
   return bcrypt.hash(password, saltRounds);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
-export function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: ACCESS_TOKEN_EXPIRY,
-  } as SignOptions);
-}
-
-export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: REFRESH_TOKEN_EXPIRY,
-  } as SignOptions);
 }
 
 export function generateTokens(user: User): AuthTokens {
@@ -58,15 +37,14 @@ export function generateTokens(user: User): AuthTokens {
     role: user.role,
   };
 
-  const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken(payload);
+  const accessToken = jwt.sign(payload, JWT_SECRET, {expiresIn: ACCESS_TOKEN_EXPIRY} as SignOptions);
+  const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {expiresIn: REFRESH_TOKEN_EXPIRY} as SignOptions);
 
-  // Calculate expiry dates
   const accessTokenExpiresAt = new Date();
-  accessTokenExpiresAt.setMinutes(accessTokenExpiresAt.getMinutes() + 15); // 15 minutes
+  accessTokenExpiresAt.setMinutes(accessTokenExpiresAt.getMinutes() + 15); 
 
   const refreshTokenExpiresAt = new Date();
-  refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7); // 7 days
+  refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7); 
 
   return {
     accessToken,
@@ -88,7 +66,10 @@ export function verifyAccessToken(token: string): TokenPayload | null {
     }
     return null;
   } catch (error) {
-    return null;
+    console.error('Error verifying access token:', error);
+    throw new GraphQLError('Error verifying access token', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
   }
 }
 
@@ -102,9 +83,14 @@ export function verifyRefreshToken(token: string): TokenPayload | null {
         role: decoded.role as Role,
       };
     }
-    return null;
+    throw new GraphQLError('Invalid refresh token', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
   } catch (error) {
-    return null;
+    console.error('Error verifying refresh token:', error);
+    throw new GraphQLError('Error verifying refresh token', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
   }
 }
 
@@ -141,4 +127,64 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
   });
 }
 
+export function setAuthCookies(res: Response, tokens: AuthTokens): void {
+  // Set access token cookie (15 minutes)
+  const accessTokenMaxAge = 15 * 60 * 1000; 
+  res.cookie('accessToken', tokens.accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: accessTokenMaxAge,
+  });
 
+  // Set refresh token cookie (7 days)
+  const refreshTokenMaxAge = 7 * 24 * 60 * 60 * 1000; 
+  res.cookie('refreshToken', tokens.refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: refreshTokenMaxAge,
+  });
+}
+
+export function clearAuthCookies(res: Response): void {
+  res.clearCookie('accessToken', COOKIE_OPTIONS);
+  res.clearCookie('refreshToken', COOKIE_OPTIONS);
+}
+
+export function getAccessTokenFromCookie(req: any): string | null {
+  return req.cookies?.accessToken || null;
+}
+
+export function getRefreshTokenFromCookie(req: any): string | null {
+  return req.cookies?.refreshToken || null;
+}
+
+export async function getUserFromToken(token: string): Promise<User | null> {
+  const payload = verifyAccessToken(token);
+  if (!payload) {
+    throw new GraphQLError('Invalid access token', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
+  }
+
+  const session = await prisma.session.findFirst({
+    where: {
+      userId: payload.userId,
+      accessToken: token,
+      isActive: true,
+      accessTokenExpiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!session) {
+    throw new GraphQLError('Invalid session', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    });
+  }
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { lastUsedAt: new Date() },
+  });
+
+  return prisma.user.findUnique({
+    where: { id: payload.userId },
+  });
+}

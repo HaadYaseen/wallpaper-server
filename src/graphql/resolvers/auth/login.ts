@@ -1,80 +1,158 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers } from "../../../generated/graphql";
+import { UserResponseType } from "../../../types/userTypes";
 import { GraphQLError } from "graphql";
-import { verifyPassword, generateTokens, createSession } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
-import { AuthResponse } from "./types";
+import { generateTokens, createSession } from "../../../utils/auth";
+import { prisma } from "../../../utils/prisma";
+import { AuthResponse } from "../../../types/authTypes";
+import { setAuthCookies } from "../../../utils/auth";
+import {
+  isAccountLocked,
+  recordFailedLoginAttempt,
+  resetFailedLoginAttempts,
+  getRemainingAttempts,
+} from "../../../utils/bruteForceProtection";
+import { checkUserBan } from "../../../utils/banCheck";
+import bcrypt from 'bcrypt';
+import { loginInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { LoginInput } from "../../../types/authTypes";
+import { generateVerificationEmail } from "../../../utils/emailTemplates";
+import { sendEmail } from "../../../utils/mailer";
+import { generateOTP } from "../../../utils/otp";
+import { OTPType } from "@prisma/client";
 
 export const login: MutationResolvers["login"] = async (
   root,
   args,
   context
 ) => {
-  const { email, password } = args.input;
-
-  if (!email || !password) {
-    throw new GraphQLError('Email and password are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+  const validatedInput = validateInput<LoginInput>(loginInputSchema, args.input);
+  const { email, password } = validatedInput;
 
   const user = await prisma.user.findUnique({
     where: { email },
   });
 
   if (!user) {
+    // Add a small delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100));
     throw new GraphQLError('Invalid email or password', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }
 
-  // Check if user has a password (OAuth users don't have passwords)
+  const banStatus = await checkUserBan(prisma, user);
+  if (banStatus.isBanned) {
+    throw new GraphQLError(banStatus.message, {
+      extensions: {
+        code: 'FORBIDDEN',
+        isPermanent: banStatus.isPermanent,
+        bannedUntil: banStatus.bannedUntil?.toISOString(),
+        bannedReason: banStatus.bannedReason,
+        minutesRemaining: banStatus.minutesRemaining,
+      },
+    });
+  }
+
+  const lockStatus = await isAccountLocked(prisma, user.id);
+  if (lockStatus.locked && lockStatus.lockedUntil) {
+    const minutesRemaining = Math.ceil(
+      (lockStatus.lockedUntil.getTime() - Date.now()) / (1000 * 60)
+    );
+    throw new GraphQLError(
+      `Account is temporarily locked due to too many failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
+      {
+        extensions: {
+          code: 'FORBIDDEN',
+          lockedUntil: lockStatus.lockedUntil.toISOString(),
+        },
+      }
+    );
+  }
+
   if (!user.password) {
+    await new Promise(resolve => setTimeout(resolve, 100));
     throw new GraphQLError('Please sign in with Google', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }
 
-  // Verify password
-  const isValidPassword = await verifyPassword(password, user.password);
+  const isValidPassword = await bcrypt.compare(password, user.password || '');
   if (!isValidPassword) {
-    throw new GraphQLError('Invalid email or password', {
+    const lockResult = await recordFailedLoginAttempt(prisma, user.id);
+    const remainingAttempts = await getRemainingAttempts(prisma, user.id);
+
+    if (lockResult.locked) {
+      throw new GraphQLError(
+        'Account has been temporarily locked due to too many failed login attempts. Please try again in 15 minutes.',
+        {
+          extensions: {
+            code: 'FORBIDDEN',
+            lockedUntil: lockResult.lockedUntil?.toISOString(),
+          },
+        }
+      );
+    }
+
+    // Add delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    throw new GraphQLError(
+      `Invalid email or password. ${remainingAttempts} attempt(s) remaining before account lockout.`,
+      {
+        extensions: {
+          code: 'UNAUTHENTICATED',
+          remainingAttempts,
+        },
+      }
+    );
+  }
+
+  if (!user.isActive) {
+   prisma.user.update({
+    where: { id: user.id },
+    data: { isActive: true },
+   });
+  }
+
+  if (!user.isVerified) {
+    const verificationCode = await generateOTP(user.id, OTPType.EMAIL_VERIFICATION, 15);
+
+    const emailContent = generateVerificationEmail({
+      name: user.name,
+      verificationCode,
+    });
+  
+     sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+    throw new GraphQLError('Your email is not verified. We have sent a verification code to your email address. Please check your email and enter the code to verify your email.', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }
 
-  // Check if user is active
-  if (!user.isActive) {
-    throw new GraphQLError('Account is inactive', {
-      extensions: { code: 'FORBIDDEN' },
-    });
-  }
+  // Reset failed login attempts on successful login
+  await resetFailedLoginAttempts(prisma, user.id);
 
-  if (user.isBanned) {
-    throw new GraphQLError('Account is banned', {
-      extensions: { code: 'FORBIDDEN' },
-    });
-  }
-
-  // Generate tokens
   const tokens = generateTokens(user);
 
-  // Create session
   const deviceInfo = context.req.headers['user-agent'] || undefined;
   const ipAddress = context.req.ip || context.req.socket.remoteAddress || undefined;
   await createSession(user.id, tokens, deviceInfo, ipAddress);
 
-  // Update last login
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLogin: new Date() },
   });
 
+  setAuthCookies(context.res, tokens);
+
   return {
-    user: user as unknown as UserGraphqlType,
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
+    user: user as UserResponseType,
+    message: 'Login successful',
   } as AuthResponse;
 };
 

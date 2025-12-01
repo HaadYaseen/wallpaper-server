@@ -2,7 +2,6 @@ type Mutation {
   _empty: String
 }
 
-# Local account signup (email/password)
 input SignUpInput {
   email: String!
   password: String!
@@ -16,25 +15,60 @@ input LoginInput {
   password: String!
 }
 
-# Google OAuth authentication (handles both signup and login)
 input GoogleAuthInput {
   idToken: String!
 }
 
+type UserResponseType {
+  id: String!
+  email: String!
+  role: Role!
+  name: String!
+  username: String!
+  avatar: String
+  isVerified: Boolean!
+}
+
 type AuthResponse {
-  user: UserGraphqlType!
-  accessToken: String!
-  refreshToken: String!
-  accessTokenExpiresAt: String!
-  refreshTokenExpiresAt: String!
+  user: UserResponseType!
+  message: String!
+}
+
+type SignUpResponse {
+  user: UserResponseType!
+  message: String!
+}
+
+input VerifyEmailInput {
+  email: String!
+  code: String!
+}
+
+enum OTPType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  TWO_FACTOR_AUTH
+  LOGIN_VERIFICATION
+}
+
+input RequestOTPInput {
+  email: String!
+  type: OTPType!
+}
+
+type RequestOTPResponse {
+  message: String!
+  expiresInMinutes: Int!
 }
 
 extend type Mutation {
-  signUp(input: SignUpInput!): AuthResponse!
+  signUp(input: SignUpInput!): SignUpResponse!
+  verifyEmail(input: VerifyEmailInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
   googleAuth(input: GoogleAuthInput!): AuthResponse!
   refreshToken(refreshToken: String!): AuthResponse!
   logout: Boolean!
   logoutAll: Boolean!
+  requestOTP(input: RequestOTPInput!): RequestOTPResponse!
 }
 

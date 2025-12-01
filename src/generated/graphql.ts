@@ -21,11 +21,8 @@ export type Scalars = {
 
 export type AuthResponse = {
   __typename?: 'AuthResponse';
-  accessToken: Scalars['String']['output'];
-  accessTokenExpiresAt: Scalars['String']['output'];
-  refreshToken: Scalars['String']['output'];
-  refreshTokenExpiresAt: Scalars['String']['output'];
-  user: UserGraphqlType;
+  message: Scalars['String']['output'];
+  user: UserResponseType;
 };
 
 export type ContestGraphqlType = {
@@ -149,10 +146,12 @@ export type Mutation = {
   logout: Scalars['Boolean']['output'];
   logoutAll: Scalars['Boolean']['output'];
   refreshToken: AuthResponse;
-  signUp: AuthResponse;
+  requestOTP: RequestOtpResponse;
+  signUp: SignUpResponse;
   updateContest?: Maybe<ContestGraphqlType>;
   updateUser?: Maybe<UserGraphqlType>;
   updateWallpaperResult: WallpaperResultGraphqlType;
+  verifyEmail: AuthResponse;
 };
 
 
@@ -211,6 +210,11 @@ export type MutationRefreshTokenArgs = {
 };
 
 
+export type MutationRequestOtpArgs = {
+  input: RequestOtpInput;
+};
+
+
 export type MutationSignUpArgs = {
   input: SignUpInput;
 };
@@ -229,6 +233,18 @@ export type MutationUpdateUserArgs = {
 export type MutationUpdateWallpaperResultArgs = {
   input: UpdateWallpaperResultInput;
 };
+
+
+export type MutationVerifyEmailArgs = {
+  input: VerifyEmailInput;
+};
+
+export enum OtpType {
+  EmailVerification = 'EMAIL_VERIFICATION',
+  LoginVerification = 'LOGIN_VERIFICATION',
+  PasswordReset = 'PASSWORD_RESET',
+  TwoFactorAuth = 'TWO_FACTOR_AUTH'
+}
 
 export enum Orientation {
   Landscape = 'LANDSCAPE',
@@ -349,6 +365,17 @@ export type QueryWallpapersFilterInput = {
   wallpaperStatus?: InputMaybe<WallpaperStatus>;
 };
 
+export type RequestOtpInput = {
+  email: Scalars['String']['input'];
+  type: OtpType;
+};
+
+export type RequestOtpResponse = {
+  __typename?: 'RequestOTPResponse';
+  expiresInMinutes: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+};
+
 export enum Role {
   Admin = 'ADMIN',
   Judge = 'JUDGE',
@@ -362,6 +389,12 @@ export type SignUpInput = {
   name: Scalars['String']['input'];
   password: Scalars['String']['input'];
   username: Scalars['String']['input'];
+};
+
+export type SignUpResponse = {
+  __typename?: 'SignUpResponse';
+  message: Scalars['String']['output'];
+  user: UserResponseType;
 };
 
 export type UpdateContestInput = {
@@ -414,6 +447,22 @@ export type UserGraphqlType = {
   role: Role;
   updatedAt: Scalars['String']['output'];
   username: Scalars['String']['output'];
+};
+
+export type UserResponseType = {
+  __typename?: 'UserResponseType';
+  avatar?: Maybe<Scalars['String']['output']>;
+  email: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  isVerified: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  role: Role;
+  username: Scalars['String']['output'];
+};
+
+export type VerifyEmailInput = {
+  code: Scalars['String']['input'];
+  email: Scalars['String']['input'];
 };
 
 export type WallpaperGraphqlType = {
@@ -564,6 +613,7 @@ export type ResolversTypes = ResolversObject<{
   JSON: ResolverTypeWrapper<Scalars['JSON']['output']>;
   LoginInput: LoginInput;
   Mutation: ResolverTypeWrapper<{}>;
+  OTPType: OtpType;
   Orientation: Orientation;
   Pagination: Pagination;
   Query: ResolverTypeWrapper<{}>;
@@ -572,13 +622,18 @@ export type ResolversTypes = ResolversObject<{
   QueryUsersFilterInput: QueryUsersFilterInput;
   QueryWallpaperResultsFilterInput: QueryWallpaperResultsFilterInput;
   QueryWallpapersFilterInput: QueryWallpapersFilterInput;
+  RequestOTPInput: RequestOtpInput;
+  RequestOTPResponse: ResolverTypeWrapper<RequestOtpResponse>;
   Role: Role;
   SignUpInput: SignUpInput;
+  SignUpResponse: ResolverTypeWrapper<SignUpResponse>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   UpdateContestInput: UpdateContestInput;
   UpdateUserInput: UpdateUserInput;
   UpdateWallpaperResultInput: UpdateWallpaperResultInput;
   UserGraphqlType: ResolverTypeWrapper<UserGraphqlType>;
+  UserResponseType: ResolverTypeWrapper<UserResponseType>;
+  VerifyEmailInput: VerifyEmailInput;
   WallpaperGraphqlType: ResolverTypeWrapper<WallpaperGraphqlType>;
   WallpaperResultGraphqlType: ResolverTypeWrapper<WallpaperResultGraphqlType>;
   WallpaperStatus: WallpaperStatus;
@@ -608,23 +663,25 @@ export type ResolversParentTypes = ResolversObject<{
   QueryUsersFilterInput: QueryUsersFilterInput;
   QueryWallpaperResultsFilterInput: QueryWallpaperResultsFilterInput;
   QueryWallpapersFilterInput: QueryWallpapersFilterInput;
+  RequestOTPInput: RequestOtpInput;
+  RequestOTPResponse: RequestOtpResponse;
   SignUpInput: SignUpInput;
+  SignUpResponse: SignUpResponse;
   String: Scalars['String']['output'];
   UpdateContestInput: UpdateContestInput;
   UpdateUserInput: UpdateUserInput;
   UpdateWallpaperResultInput: UpdateWallpaperResultInput;
   UserGraphqlType: UserGraphqlType;
+  UserResponseType: UserResponseType;
+  VerifyEmailInput: VerifyEmailInput;
   WallpaperGraphqlType: WallpaperGraphqlType;
   WallpaperResultGraphqlType: WallpaperResultGraphqlType;
   acceptOrRejectWallpaperInput: AcceptOrRejectWallpaperInput;
 }>;
 
 export type AuthResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['AuthResponse'] = ResolversParentTypes['AuthResponse']> = ResolversObject<{
-  accessToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  accessTokenExpiresAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  refreshToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  refreshTokenExpiresAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  user?: Resolver<ResolversTypes['UserGraphqlType'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  user?: Resolver<ResolversTypes['UserResponseType'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -690,10 +747,12 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   logout?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   logoutAll?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   refreshToken?: Resolver<ResolversTypes['AuthResponse'], ParentType, ContextType, RequireFields<MutationRefreshTokenArgs, 'refreshToken'>>;
-  signUp?: Resolver<ResolversTypes['AuthResponse'], ParentType, ContextType, RequireFields<MutationSignUpArgs, 'input'>>;
+  requestOTP?: Resolver<ResolversTypes['RequestOTPResponse'], ParentType, ContextType, RequireFields<MutationRequestOtpArgs, 'input'>>;
+  signUp?: Resolver<ResolversTypes['SignUpResponse'], ParentType, ContextType, RequireFields<MutationSignUpArgs, 'input'>>;
   updateContest?: Resolver<Maybe<ResolversTypes['ContestGraphqlType']>, ParentType, ContextType, RequireFields<MutationUpdateContestArgs, 'input'>>;
   updateUser?: Resolver<Maybe<ResolversTypes['UserGraphqlType']>, ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'input'>>;
   updateWallpaperResult?: Resolver<ResolversTypes['WallpaperResultGraphqlType'], ParentType, ContextType, RequireFields<MutationUpdateWallpaperResultArgs, 'input'>>;
+  verifyEmail?: Resolver<ResolversTypes['AuthResponse'], ParentType, ContextType, RequireFields<MutationVerifyEmailArgs, 'input'>>;
 }>;
 
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
@@ -709,6 +768,18 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   wallpaperResult?: Resolver<ResolversTypes['WallpaperResultGraphqlType'], ParentType, ContextType, RequireFields<QueryWallpaperResultArgs, 'id'>>;
   wallpaperResults?: Resolver<Array<ResolversTypes['WallpaperResultGraphqlType']>, ParentType, ContextType, Partial<QueryWallpaperResultsArgs>>;
   wallpapers?: Resolver<Array<ResolversTypes['WallpaperGraphqlType']>, ParentType, ContextType, Partial<QueryWallpapersArgs>>;
+}>;
+
+export type RequestOtpResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RequestOTPResponse'] = ResolversParentTypes['RequestOTPResponse']> = ResolversObject<{
+  expiresInMinutes?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type SignUpResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SignUpResponse'] = ResolversParentTypes['SignUpResponse']> = ResolversObject<{
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  user?: Resolver<ResolversTypes['UserResponseType'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type UserGraphqlTypeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['UserGraphqlType'] = ResolversParentTypes['UserGraphqlType']> = ResolversObject<{
@@ -727,6 +798,17 @@ export type UserGraphqlTypeResolvers<ContextType = GraphQLContext, ParentType ex
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   role?: Resolver<ResolversTypes['Role'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  username?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type UserResponseTypeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['UserResponseType'] = ResolversParentTypes['UserResponseType']> = ResolversObject<{
+  avatar?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  isVerified?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  role?: Resolver<ResolversTypes['Role'], ParentType, ContextType>;
   username?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
@@ -785,7 +867,10 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   JSON?: GraphQLScalarType;
   Mutation?: MutationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  RequestOTPResponse?: RequestOtpResponseResolvers<ContextType>;
+  SignUpResponse?: SignUpResponseResolvers<ContextType>;
   UserGraphqlType?: UserGraphqlTypeResolvers<ContextType>;
+  UserResponseType?: UserResponseTypeResolvers<ContextType>;
   WallpaperGraphqlType?: WallpaperGraphqlTypeResolvers<ContextType>;
   WallpaperResultGraphqlType?: WallpaperResultGraphqlTypeResolvers<ContextType>;
 }>;

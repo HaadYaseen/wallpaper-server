@@ -1,23 +1,31 @@
-import { MutationResolvers, UserGraphqlType } from "../../../generated/graphql";
+import { MutationResolvers, UserResponseType } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
 import { generateTokens, verifyRefreshToken } from "../../../utils/auth";
-import { prisma } from "../../../utils/context";
-import { AuthResponse } from "./types";
+import { prisma } from "../../../utils/prisma";
+import { AuthResponse } from "../../../types/authTypes";
+import { setAuthCookies, getRefreshTokenFromCookie } from "../../../utils/auth";
+import { refreshTokenInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { RefreshTokenInput } from "../../../types/authTypes";
 
 export const refreshToken: MutationResolvers["refreshToken"] = async (
   root,
   args,
   context
 ) => {
-  const { refreshToken: token } = args;
+  if (args.refreshToken) {
+    validateInput<RefreshTokenInput>(refreshTokenInputSchema, { refreshToken: args.refreshToken }, 'UNAUTHENTICATED');
+  }
+
+  const tokenFromCookie = getRefreshTokenFromCookie(context.req);
+  const token = tokenFromCookie || args.refreshToken;
 
   if (!token) {
-    throw new GraphQLError('Refresh token is required', {
-      extensions: { code: 'BAD_USER_INPUT' },
+    throw new GraphQLError('Refresh token is missing', {
+      extensions: { code: 'UNAUTHENTICATED' },
     });
   }
 
-  // Verify refresh token
   const payload = verifyRefreshToken(token);
   if (!payload) {
     throw new GraphQLError('Invalid refresh token', {
@@ -25,7 +33,6 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Verify session is still active
   const session = await prisma.session.findFirst({
     where: {
       userId: payload.userId,
@@ -41,7 +48,6 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Get user
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
   });
@@ -52,10 +58,8 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     });
   }
 
-  // Generate new tokens
   const tokens = generateTokens(user);
 
-  // Update session with new tokens
   await prisma.session.update({
     where: { id: session.id },
     data: {
@@ -67,12 +71,11 @@ export const refreshToken: MutationResolvers["refreshToken"] = async (
     },
   });
 
+  setAuthCookies(context.res, tokens);
+
   return {
-    user: user as unknown as UserGraphqlType,
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    accessTokenExpiresAt: tokens.accessTokenExpiresAt.toISOString(),
-    refreshTokenExpiresAt: tokens.refreshTokenExpiresAt.toISOString(),
+    user: user as UserResponseType,
+    message: 'Token refreshed successfully',
   } as AuthResponse;
 };
 

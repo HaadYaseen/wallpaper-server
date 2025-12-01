@@ -1,57 +1,11 @@
 import { Request, Response } from 'express';
-import { PrismaClient, User } from '@prisma/client';
-import { verifyAccessToken } from './auth';
-import { AuthenticatedUser } from './rbac';
+import { AuthenticatedUser } from '../types/authTypes';
 import { getOperationName } from './getOperationName';
+import { GraphQLContext } from '../types/graphqlContextTypes';
+import { getAccessTokenFromCookie, getUserFromToken } from './auth';
+import { PUBLIC_OPERATIONS } from './publicOperations';
+import { prisma } from './prisma';
 
-export const prisma = new PrismaClient();
-
-const PUBLIC_OPERATIONS = [
-  'IntrospectionQuery',
-  'signUp',
-  'login',
-  'googleAuth',
-  'refreshToken',
-];
-
-async function getUserFromToken(token: string): Promise<User | null> {
-  const payload = verifyAccessToken(token);
-  if (!payload) {
-    return null;
-  }
-
-  const session = await prisma.session.findFirst({
-    where: {
-      userId: payload.userId,
-      accessToken: token,
-      isActive: true,
-      accessTokenExpiresAt: { gt: new Date() },
-    },
-  });
-
-  if (!session) {
-    return null;
-  }
-
-  await prisma.session.update({
-    where: { id: session.id },
-    data: { lastUsedAt: new Date() },
-  });
-
-  return prisma.user.findUnique({
-    where: { id: payload.userId },
-  });
-}
-
-export interface GraphQLContext {
-  req: Request;
-  res: Response;
-  prisma: PrismaClient;
-  user: AuthenticatedUser | null;
-  _operationName?: string | null;
-  _operationType?: 'query' | 'mutation' | 'subscription';
-  _isPublic?: boolean;
-}
 
 export async function createContext({
   req,
@@ -76,7 +30,6 @@ export async function createContext({
       )
     : false;
 
-  // Store operation type for logging in plugin
   const operationType = req.body?.query?.includes('mutation')
     ? 'mutation'
     : req.body?.query?.includes('subscription')
@@ -95,21 +48,11 @@ export async function createContext({
     };
   }
 
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
+  const token = getAccessTokenFromCookie(req);
+  
+  if (token) {
     const dbUser = await getUserFromToken(token);
-
-    if (dbUser) {
-      user = {
-        id: dbUser.id,
-        email: dbUser.email,
-        role: dbUser.role,
-        isActive: dbUser.isActive,
-        isBanned: dbUser.isBanned,
-        isVerified: dbUser.isVerified,
-      };
-    }
+    user = dbUser;
   }
 
   return {

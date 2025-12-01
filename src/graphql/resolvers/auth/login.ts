@@ -16,6 +16,10 @@ import bcrypt from 'bcrypt';
 import { loginInputSchema } from "../../../validation/authValidation";
 import { validateInput } from "../../../validation/joiErrorFormatter";
 import { LoginInput } from "../../../types/authTypes";
+import { generateVerificationEmail } from "../../../utils/emailTemplates";
+import { sendEmail } from "../../../utils/mailer";
+import { generateOTP } from "../../../utils/otp";
+import { OTPType } from "@prisma/client";
 
 export const login: MutationResolvers["login"] = async (
   root,
@@ -112,7 +116,20 @@ export const login: MutationResolvers["login"] = async (
   }
 
   if (!user.isVerified) {
-    throw new GraphQLError('Please verify your email address before logging in. Check your email for the verification code. or request a new verification code.', {
+    const verificationCode = await generateOTP(user.id, OTPType.EMAIL_VERIFICATION, 15);
+
+    const emailContent = generateVerificationEmail({
+      name: user.name,
+      verificationCode,
+    });
+  
+     sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+    throw new GraphQLError('Your email is not verified. We have sent a verification code to your email address. Please check your email and enter the code to verify your email.', {
       extensions: { code: 'UNAUTHENTICATED' },
     });
   }

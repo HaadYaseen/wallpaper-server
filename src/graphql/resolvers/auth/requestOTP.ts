@@ -9,30 +9,28 @@ import {
   generatePasswordResetEmail 
 } from "../../../utils/emailTemplates";
 import { checkUserBan } from "../../../utils/banCheck";
+import { requestOTPInputSchema } from "../../../validation/authValidation";
+import { RequestOTPInput } from "../../../types/authTypes";
+import { validateInput } from "../../../validation/joiErrorFormatter";
 
 export const requestOTP: MutationResolvers["requestOTP"] = async (
   root,
   args,
   context
 ) => {
-  const { email, type } = args.input;
-
-  if (!email || !type) {
-    throw new GraphQLError('Email and OTP type are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+  const validatedInput = validateInput<RequestOTPInput>(requestOTPInputSchema, args.input);
+  const { email, type } = validatedInput;
+  
+  const otpType = type;
 
   const user = await prisma.user.findUnique({
     where: { email },
   });
 
   if (!user) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return {
-      message: 'If an account exists with this email, an OTP code has been sent.',
-      expiresInMinutes: 15,
-    };
+    throw new GraphQLError('Account not found', {
+      extensions: { code: 'NOT_FOUND' },
+    });
   }
 
   if (user.isBanned) {
@@ -47,7 +45,7 @@ export const requestOTP: MutationResolvers["requestOTP"] = async (
     });
   }
 
-  if (type === OTPType.EMAIL_VERIFICATION) {
+  if (otpType === OTPType.EMAIL_VERIFICATION) {
     if (user.isVerified) {
       throw new GraphQLError('Email is already verified', {
         extensions: { code: 'BAD_USER_INPUT' },
@@ -55,7 +53,7 @@ export const requestOTP: MutationResolvers["requestOTP"] = async (
     }
   }
 
-  if (type === OTPType.PASSWORD_RESET) {
+  if (otpType === OTPType.PASSWORD_RESET) {
     if (!user.password) {
       throw new GraphQLError('Password reset is not available for accounts signed in with Google', {
         extensions: { code: 'BAD_USER_INPUT' },
@@ -64,10 +62,10 @@ export const requestOTP: MutationResolvers["requestOTP"] = async (
   }
 
   const expiresInMinutes = 15;
-  const otpCode = await generateOTP(user.id, type, expiresInMinutes);
+  const otpCode = await generateOTP(user.id, otpType, expiresInMinutes);
 
   let emailContent;
-  switch (type) {
+  switch (otpType) {
     case OTPType.EMAIL_VERIFICATION:
       emailContent = generateVerificationEmail({
         name: user.name,
@@ -89,7 +87,7 @@ export const requestOTP: MutationResolvers["requestOTP"] = async (
         name: user.name,
         verificationCode: otpCode,
       });
-      emailContent.subject = type === OTPType.TWO_FACTOR_AUTH 
+      emailContent.subject = otpType === OTPType.TWO_FACTOR_AUTH 
         ? 'Two-Factor Authentication Code'
         : 'Login Verification Code';
       break;

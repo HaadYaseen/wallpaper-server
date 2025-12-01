@@ -13,19 +13,17 @@ import {
 } from "../../../utils/bruteForceProtection";
 import { checkUserBan } from "../../../utils/banCheck";
 import bcrypt from 'bcrypt';
+import { loginInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { LoginInput } from "../../../types/authTypes";
 
 export const login: MutationResolvers["login"] = async (
   root,
   args,
   context
 ) => {
-  const { email, password } = args.input;
-
-  if (!email || !password) {
-    throw new GraphQLError('Email and password are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+  const validatedInput = validateInput<LoginInput>(loginInputSchema, args.input);
+  const { email, password } = validatedInput;
 
   const user = await prisma.user.findUnique({
     where: { email },

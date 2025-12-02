@@ -35,6 +35,7 @@ async function startServer() {
   const apolloServer = new ApolloServer({
     schema,
     plugins: [statusCodePlugin, apiLoggerPlugin],
+    introspection: true,
   });
 
   await apolloServer.start();

@@ -56,9 +56,14 @@ input QueryContestsFilterInput {
   startTime: DateTime
 }
 
+type PaginatedContestType {
+  pagination: PaginationResponseType!
+  data: [ContestGraphqlType!]!
+}
+
 extend type Query {
   contest(id: String!): ContestGraphqlType
-  contests(filter: QueryContestsFilterInput, pagination: Pagination): [ContestGraphqlType!]!
+  contests(filter: QueryContestsFilterInput, pagination: Pagination, sort: SortInput): PaginatedContestType!
 }
 
 extend type Mutation {

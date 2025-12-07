@@ -9,3 +9,23 @@ input Pagination {
   skip: Int
   take: Int
 }
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+input SortInput {
+  field: String!
+  order: SortOrder!
+}
+
+type PaginationResponseType {
+  totalCount: Int!
+  currentPage: Int!
+  itemsPerPage: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startIndex: Int!
+  endIndex: Int!
+}

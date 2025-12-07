@@ -1,8 +1,10 @@
-import { ContestGraphqlType, MutationResolvers } from "../../../generated/graphql";
+import { ContestGraphqlType, CreateContestInput, MutationResolvers } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
 import { requireRole } from "../../../utils/rbac";
 import { Role } from "@prisma/client";
 import { logger } from "../../../utils/logger";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { createContestSchema } from "../../../validation/contestValidator";
 
 export const createContest: MutationResolvers["createContest"] = async (
   root,
@@ -11,25 +13,26 @@ export const createContest: MutationResolvers["createContest"] = async (
 ) => {
   requireRole(context.user, [Role.ADMIN, Role.SUPER_ADMIN]);
 
+  const validatedInput = validateInput<CreateContestInput>(createContestSchema, args.input);
+  const { startTime, durationInDays, contestStatus, contestType, totalPrize, firstPrize, secondPrize, thirdPrize } = validatedInput;
+
   try {
-    const { input } = args;
     const { prisma } = context;
 
-    // Calculate endTime from startTime + durationInDays
-    const startTime = new Date(input.startTime);
-    const endTime = new Date(startTime);
-    endTime.setDate(endTime.getDate() + input.durationInDays);
+    const startTimeDate = new Date(startTime);
+    const endTime = new Date(startTimeDate);
+    endTime.setDate(endTime.getDate() + durationInDays);
 
     const contest = await prisma.contest.create({
       data: {
-        startTime: input.startTime,
+        startTime: startTimeDate,
         endTime: endTime,
-        contestStatus: input.contestStatus,
-        contestType: input.contestType,
-        totalPrize: input.totalPrize,
-        firstPrize: input.firstPrize,
-        secondPrize: input.secondPrize,
-        thirdPrize: input.thirdPrize,
+        contestStatus: contestStatus,
+        contestType: contestType,
+        totalPrize,
+        firstPrize,
+        secondPrize,
+        thirdPrize,
       },
     });
 

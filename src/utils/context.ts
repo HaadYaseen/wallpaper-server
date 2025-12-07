@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import { AuthenticatedUser } from '../types/authTypes';
 import { getOperationName } from './getOperationName';
-import { GraphQLContext } from '../types/graphqlContextTypes';
 import { getAccessTokenFromCookie, getUserFromToken } from './auth';
 import { PUBLIC_OPERATIONS } from './publicOperations';
 import { prisma } from './prisma';
+import { GraphQLContext } from '../types/graphqlContextTypes';
 
+export type { GraphQLContext };
 
 export async function createContext({
   req,

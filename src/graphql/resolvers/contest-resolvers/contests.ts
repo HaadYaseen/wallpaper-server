@@ -1,5 +1,5 @@
 import { GraphQLError } from "graphql";
-import { ContestStatus, ContestType, QueryResolvers } from "../../../generated/graphql";
+import { ContestGraphqlType, ContestStatus, ContestType, PaginationResponseType, QueryResolvers } from "../../../generated/graphql";
 
 export const contests: QueryResolvers["contests"] = async (
   root,
@@ -81,8 +81,8 @@ export const contests: QueryResolvers["contests"] = async (
     };
 
     return {
-      pagination: paginationResponse,
-      data: contests,
+      pagination: paginationResponse as PaginationResponseType,
+      data: contests as ContestGraphqlType[],
     };
 
   } catch (error) {

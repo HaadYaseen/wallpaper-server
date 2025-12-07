@@ -7,8 +7,8 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // Get super admin credentials from environment variables
-  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@wallpapers.com';
-  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin123!';
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'sadmin@wallpapers.com';
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'It$Crypt0!';
   const superAdminName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
   const superAdminUsername = process.env.SUPER_ADMIN_USERNAME || 'superadmin';
 

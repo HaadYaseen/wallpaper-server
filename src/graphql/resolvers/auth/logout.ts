@@ -12,12 +12,7 @@ export const logout: MutationResolvers["logout"] = async (
   const user = requireAuth(context.user);
 
   const tokenFromCookie = getAccessTokenFromCookie(context.req);
-  // const authHeader = context.req.headers.authorization;
-  // const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ') 
-    // ? authHeader.substring(7) 
-    // : null;
   const token = tokenFromCookie;
-  console.log('token from cookie in logout resolver', token);
 
   if (token) {
     const session = await prisma.session.findFirst({

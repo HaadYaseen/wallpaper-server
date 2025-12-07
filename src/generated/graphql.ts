@@ -251,9 +251,26 @@ export enum Orientation {
   Portrait = 'PORTRAIT'
 }
 
+export type PaginatedContestType = {
+  __typename?: 'PaginatedContestType';
+  data: Array<ContestGraphqlType>;
+  pagination: PaginationResponseType;
+};
+
 export type Pagination = {
   skip?: InputMaybe<Scalars['Int']['input']>;
   take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PaginationResponseType = {
+  __typename?: 'PaginationResponseType';
+  currentPage: Scalars['Int']['output'];
+  endIndex: Scalars['Int']['output'];
+  hasNextPage: Scalars['Boolean']['output'];
+  hasPreviousPage: Scalars['Boolean']['output'];
+  itemsPerPage: Scalars['Int']['output'];
+  startIndex: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
 };
 
 export type Query = {
@@ -262,7 +279,7 @@ export type Query = {
   contest?: Maybe<ContestGraphqlType>;
   contestResult: ContestResultGraphqlType;
   contestResults: Array<ContestResultGraphqlType>;
-  contests: Array<ContestGraphqlType>;
+  contests: PaginatedContestType;
   me?: Maybe<UserGraphqlType>;
   user?: Maybe<UserGraphqlType>;
   users: Array<UserGraphqlType>;
@@ -292,6 +309,7 @@ export type QueryContestResultsArgs = {
 export type QueryContestsArgs = {
   filter?: InputMaybe<QueryContestsFilterInput>;
   pagination?: InputMaybe<Pagination>;
+  sort?: InputMaybe<SortInput>;
 };
 
 
@@ -396,6 +414,16 @@ export type SignUpResponse = {
   message: Scalars['String']['output'];
   user: UserResponseType;
 };
+
+export type SortInput = {
+  field: Scalars['String']['input'];
+  order: SortOrder;
+};
+
+export enum SortOrder {
+  Asc = 'ASC',
+  Desc = 'DESC'
+}
 
 export type UpdateContestInput = {
   contestStatus: ContestStatus;
@@ -615,7 +643,9 @@ export type ResolversTypes = ResolversObject<{
   Mutation: ResolverTypeWrapper<{}>;
   OTPType: OtpType;
   Orientation: Orientation;
+  PaginatedContestType: ResolverTypeWrapper<PaginatedContestType>;
   Pagination: Pagination;
+  PaginationResponseType: ResolverTypeWrapper<PaginationResponseType>;
   Query: ResolverTypeWrapper<{}>;
   QueryContestResultsFilterInput: QueryContestResultsFilterInput;
   QueryContestsFilterInput: QueryContestsFilterInput;
@@ -627,6 +657,8 @@ export type ResolversTypes = ResolversObject<{
   Role: Role;
   SignUpInput: SignUpInput;
   SignUpResponse: ResolverTypeWrapper<SignUpResponse>;
+  SortInput: SortInput;
+  SortOrder: SortOrder;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   UpdateContestInput: UpdateContestInput;
   UpdateUserInput: UpdateUserInput;
@@ -656,7 +688,9 @@ export type ResolversParentTypes = ResolversObject<{
   JSON: Scalars['JSON']['output'];
   LoginInput: LoginInput;
   Mutation: {};
+  PaginatedContestType: PaginatedContestType;
   Pagination: Pagination;
+  PaginationResponseType: PaginationResponseType;
   Query: {};
   QueryContestResultsFilterInput: QueryContestResultsFilterInput;
   QueryContestsFilterInput: QueryContestsFilterInput;
@@ -667,6 +701,7 @@ export type ResolversParentTypes = ResolversObject<{
   RequestOTPResponse: RequestOtpResponse;
   SignUpInput: SignUpInput;
   SignUpResponse: SignUpResponse;
+  SortInput: SortInput;
   String: Scalars['String']['output'];
   UpdateContestInput: UpdateContestInput;
   UpdateUserInput: UpdateUserInput;
@@ -755,12 +790,29 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   verifyEmail?: Resolver<ResolversTypes['AuthResponse'], ParentType, ContextType, RequireFields<MutationVerifyEmailArgs, 'input'>>;
 }>;
 
+export type PaginatedContestTypeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PaginatedContestType'] = ResolversParentTypes['PaginatedContestType']> = ResolversObject<{
+  data?: Resolver<Array<ResolversTypes['ContestGraphqlType']>, ParentType, ContextType>;
+  pagination?: Resolver<ResolversTypes['PaginationResponseType'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type PaginationResponseTypeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PaginationResponseType'] = ResolversParentTypes['PaginationResponseType']> = ResolversObject<{
+  currentPage?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  endIndex?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  hasNextPage?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  hasPreviousPage?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  itemsPerPage?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  startIndex?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type QueryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = ResolversObject<{
   _empty?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   contest?: Resolver<Maybe<ResolversTypes['ContestGraphqlType']>, ParentType, ContextType, RequireFields<QueryContestArgs, 'id'>>;
   contestResult?: Resolver<ResolversTypes['ContestResultGraphqlType'], ParentType, ContextType, RequireFields<QueryContestResultArgs, 'id'>>;
   contestResults?: Resolver<Array<ResolversTypes['ContestResultGraphqlType']>, ParentType, ContextType, Partial<QueryContestResultsArgs>>;
-  contests?: Resolver<Array<ResolversTypes['ContestGraphqlType']>, ParentType, ContextType, Partial<QueryContestsArgs>>;
+  contests?: Resolver<ResolversTypes['PaginatedContestType'], ParentType, ContextType, Partial<QueryContestsArgs>>;
   me?: Resolver<Maybe<ResolversTypes['UserGraphqlType']>, ParentType, ContextType>;
   user?: Resolver<Maybe<ResolversTypes['UserGraphqlType']>, ParentType, ContextType, RequireFields<QueryUserArgs, 'id'>>;
   users?: Resolver<Array<ResolversTypes['UserGraphqlType']>, ParentType, ContextType, Partial<QueryUsersArgs>>;
@@ -866,6 +918,8 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   DateTime?: GraphQLScalarType;
   JSON?: GraphQLScalarType;
   Mutation?: MutationResolvers<ContextType>;
+  PaginatedContestType?: PaginatedContestTypeResolvers<ContextType>;
+  PaginationResponseType?: PaginationResponseTypeResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RequestOTPResponse?: RequestOtpResponseResolvers<ContextType>;
   SignUpResponse?: SignUpResponseResolvers<ContextType>;

@@ -1,7 +1,5 @@
-import { ContestGraphqlType, QueryResolvers } from "../../../generated/graphql";
 import { GraphQLError } from "graphql";
-import { ContestStatus, ContestType } from "@prisma/client";
-import { dummyContests } from "../../../data/contests";
+import { ContestStatus, ContestType, QueryResolvers } from "../../../generated/graphql";
 
 export const contests: QueryResolvers["contests"] = async (
   root,
@@ -9,11 +7,12 @@ export const contests: QueryResolvers["contests"] = async (
   context
 ) => {
   try {
-    const { filter, pagination } = args;
+    const { filter, pagination, sort } = args;
     const { prisma } = context;
+    const skip = pagination?.skip ?? 0;
+    const take = pagination?.take ?? 10;
 
-    const where: any = {};
-
+    const where: any = {};    
     if (filter) {
       if (filter.contestStatus) {
         where.contestStatus = filter.contestStatus as ContestStatus;
@@ -22,49 +21,69 @@ export const contests: QueryResolvers["contests"] = async (
         where.contestType = filter.contestType as ContestType;
       }
       if (filter.participantId) {
-        where.participants = {
-          some: {
-            id: filter.participantId,
-          },
-        };
+        where.participants = { some: { id: filter.participantId } };
       }
       if (filter.startTime) {
-        where.startTime = {
-          gte: new Date(filter.startTime),
+        where.startTime = { gte: new Date(filter.startTime) };
+      }
+    }
+
+    let orderBy: any = { createdAt: "desc" };
+    if (sort?.field) {
+      const validSortFields = [
+        "createdAt",
+        "updatedAt",
+        "startTime",
+        "endTime",
+        "contestStatus",
+        "contestType",
+        "totalPrize",
+        "firstPrize",
+        "secondPrize",
+        "thirdPrize",
+      ];
+      
+      if (validSortFields.includes(sort.field)) {
+        orderBy = {
+          [sort.field]: sort.order?.toLowerCase() === "asc" ? "asc" : "desc",
         };
       }
     }
 
-    const skip = pagination?.skip ?? undefined;
-    const take = pagination?.take ?? undefined;
+    const [contests, totalCount] = await Promise.all([
+      prisma.contest.findMany({
+        where,
+        skip,
+        take,
+        orderBy,
+        include: {
+          wallpapers: true,
+          participants: true,
+          result: true,
+        },
+      }),
+      prisma.contest.count({ where }),
+    ]);
 
-    let results = [...dummyContests];
-    console.log("results", results);
-    if (filter) {
-      if (filter.contestStatus) {
-        results = results.filter(
-          (c) => c.contestStatus === filter.contestStatus
-        );
-      }
-      if (filter.contestType) {
-        results = results.filter((c) => c.contestType === filter.contestType);
-      }
-      if (filter.startTime) {
-        const filterDate = new Date(filter.startTime);
-        results = results.filter((c) => c.startTime >= filterDate);
-      }
-    }
+    const currentPage = Math.floor(skip / take) + 1;
+    const totalPages = Math.ceil(totalCount / take);
+    const startIndex = skip + 1;
+    const endIndex = Math.min(skip + take, totalCount);
 
-    if (skip !== undefined) {
-      results = results.slice(skip);
-    }
-    if (take !== undefined) {
-      results = results.slice(0, take);
-    }
+    const paginationResponse = {
+      totalCount,
+      currentPage,
+      itemsPerPage: take,
+      hasNextPage: currentPage < totalPages,
+      hasPreviousPage: currentPage > 1,
+      startIndex,
+      endIndex,
+    };
 
-    results.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    console.log("results2 ", results);
-    return results as unknown as ContestGraphqlType[];
+    return {
+      pagination: paginationResponse,
+      data: contests,
+    };
 
   } catch (error) {
     console.error("Failed to fetch contests:", error);

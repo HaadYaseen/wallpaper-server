@@ -4,14 +4,21 @@ import { generateTokens, verifyRefreshToken } from "../../../utils/auth";
 import { prisma } from "../../../utils/prisma";
 import { AuthResponse } from "../../../types/authTypes";
 import { setAuthCookies, getRefreshTokenFromCookie } from "../../../utils/auth";
+import { refreshTokenInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { RefreshTokenInput } from "../../../types/authTypes";
 
 export const refreshToken: MutationResolvers["refreshToken"] = async (
   root,
   args,
   context
 ) => {
+  if (args.refreshToken) {
+    validateInput<RefreshTokenInput>(refreshTokenInputSchema, { refreshToken: args.refreshToken }, 'UNAUTHENTICATED');
+  }
+
   const tokenFromCookie = getRefreshTokenFromCookie(context.req);
-  const token = tokenFromCookie
+  const token = tokenFromCookie || args.refreshToken;
 
   if (!token) {
     throw new GraphQLError('Refresh token is missing', {

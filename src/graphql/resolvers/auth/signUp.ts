@@ -6,26 +6,18 @@ import { generateOTP } from "../../../utils/otp";
 import { OTPType } from "@prisma/client";
 import { sendEmail } from "../../../utils/mailer";
 import { generateVerificationEmail } from "../../../utils/emailTemplates";
+import { signUpInputSchema } from "../../../validation/authValidation";
+import { validateInput } from "../../../validation/joiErrorFormatter";
+import { SignUpInput } from "../../../types/authTypes";
 
 export const signUp: MutationResolvers["signUp"] = async (
   root,
   args,
   context
 ) => {
-  const { email, password, name, username, avatar } = args.input;
+  const validatedInput = validateInput<SignUpInput>(signUpInputSchema, args.input);
+  const { email, password, name, username, avatar } = validatedInput;
 
-  if (!email || !password || !name || !username) {
-    throw new GraphQLError('All fields are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
-
-  if (password.length < 8) {
-    throw new GraphQLError('Password must be at least 8 characters', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
-  
   if (username.toLowerCase().includes('admin') || name.toLowerCase().includes('admin')) {
     throw new GraphQLError('Username and name cannot contain "admin"', {
       extensions: { code: 'BAD_USER_INPUT' },

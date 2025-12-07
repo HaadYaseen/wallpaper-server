@@ -6,19 +6,17 @@ import { OTPType } from "@prisma/client";
 import { AuthResponse } from "../../../types/authTypes";
 import { verifyOTP } from "../../../utils/otp";
 import { setAuthCookies } from "../../../utils/auth";
+import { verifyEmailInputSchema } from "../../../validation/authValidation";
+import { VerifyEmailInput } from "../../../types/authTypes";
+import { validateInput } from "../../../validation/joiErrorFormatter";
 
 export const verifyEmail: MutationResolvers["verifyEmail"] = async (
   root,
   args,
   context
 ) => {
-  const { email, code } = args.input;
-
-  if (!email || !code) {
-    throw new GraphQLError('Email and code are required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+  const validatedInput = validateInput<VerifyEmailInput>(verifyEmailInputSchema, args.input);
+  const { email, code } = validatedInput;
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -64,7 +62,7 @@ export const verifyEmail: MutationResolvers["verifyEmail"] = async (
 
   return {
     user: updatedUser as UserResponseType,
-    message: 'Email verified successfully',
+    message: 'Email verified successfully login to continue',
   } as AuthResponse;
 };
 

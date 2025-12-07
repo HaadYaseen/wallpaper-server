@@ -1,4 +1,4 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { ApolloServer } from '@apollo/server';
@@ -35,6 +35,7 @@ async function startServer() {
   const apolloServer = new ApolloServer({
     schema,
     plugins: [statusCodePlugin, apiLoggerPlugin],
+    introspection: true,
   });
 
   await apolloServer.start();

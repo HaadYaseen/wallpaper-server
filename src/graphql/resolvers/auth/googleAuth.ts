@@ -7,19 +7,17 @@ import { setAuthCookies } from "../../../utils/auth";
 import { UserResponseType } from "../../../types/userTypes";
 import { checkUserBan } from "../../../utils/banCheck";
 import { prisma } from "../../../utils/prisma";
+import { googleAuthInputSchema } from "../../../validation/authValidation";
+import { GoogleAuthInput } from "../../../types/authTypes";
+import { validateInput } from "../../../validation/joiErrorFormatter";
 
 export const googleAuth: MutationResolvers["googleAuth"] = async (
   root,
   args,
   context
 ) => {
-  const { idToken } = args.input;
-
-  if (!idToken) {
-    throw new GraphQLError('Google ID token is required', {
-      extensions: { code: 'BAD_USER_INPUT' },
-    });
-  }
+  const validatedInput = validateInput<GoogleAuthInput>(googleAuthInputSchema, args.input);
+  const { idToken } = validatedInput;
 
   const googleUser = await verifyGoogleToken(idToken);
 
